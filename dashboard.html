@@ -74,10 +74,9 @@ async function flushSync(){
   setSyncSt(error?'error':'synced');
   setTimeout(()=>setSyncSt('idle'),2000);
 }
-// Flush faster (500ms) so a quick refresh is less likely to lose data
-function scheduleSync(key,val){_pending[key]=val;clearTimeout(_syncT);_syncT=setTimeout(flushSync,500);}
-// Also flush on page unload so refreshes don't lose data
-window.addEventListener('beforeunload',()=>{if(Object.keys(_pending).length)flushSync();});
+// 400ms debounce — fast enough that manual refresh (user moves hand to F5)
+// always syncs before the page unloads
+function scheduleSync(key,val){_pending[key]=val;clearTimeout(_syncT);_syncT=setTimeout(flushSync,400);}
 
 // Smart merge for daysV2: local fields win, cloud fills missing dates/fields
 // This means: import on PC → refresh → still there (local wins)
@@ -136,28 +135,34 @@ function useSyncStatus(){
 }
 
 // ── useLS ──────────────────────────────────────────────────
-// BUG FIX: side-effects run in useEffect AFTER React resolves functional
-// updaters (e.g. setDays(prev => {...})). Previously JSON.stringify(fn) = undefined.
+// Fix 1: useEffect runs after React resolves functional updaters (prev=>{...})
+//         so JSON.stringify always gets the real value, not a function.
+// Fix 2: fromCloud flag prevents sync-loop: cloud→setVal→useEffect→scheduleSync→cloud→...
 function useLS(key,init){
   const[val,setVal]=useState(()=>{
     try{
       const s=localStorage.getItem(key);
-      // Guard against literal "undefined" string left by old bug
       if(s===null||s==='undefined')return init;
       return JSON.parse(s);
     }catch{return init;}
   });
   const mounted=useRef(false);
-  // Subscribe to cloud updates
-  useEffect(()=>addListener(key,nv=>setVal(nv)),[key]);
-  // Persist to localStorage + Supabase after every state change (skip first mount)
+  const fromCloud=useRef(false);
+
+  // Cloud update: set flag so useEffect knows NOT to sync back
+  useEffect(()=>addListener(key,nv=>{fromCloud.current=true;setVal(nv);}),[key]);
+
+  // Save + sync after every state change, but skip:
+  //   - first mount (would overwrite cloud with stale local on load)
+  //   - cloud-originated updates (prevents sync loop)
   useEffect(()=>{
     if(!mounted.current){mounted.current=true;return;}
     if(val===undefined)return;
+    if(fromCloud.current){fromCloud.current=false;return;}
     try{localStorage.setItem(key,JSON.stringify(val));}catch{}
     scheduleSync(key,val);
   },[key,val]);
-  // Return raw setVal so functional updates (prev=>{...}) work correctly
+
   return[val,setVal];
 }
 
