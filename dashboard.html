@@ -66,7 +66,7 @@ function addListener(key,fn){if(!_listeners[key])_listeners[key]=new Set();_list
 const _pending={};let _syncT=null;
 async function flushSync(){
   if(!_sb)return;
-  const rows=Object.entries(_pending).map(([key,value])=>({key,value}));
+  const rows=Object.entries(_pending).map(([key,value])=>({key,value,updated_at:new Date().toISOString()}));
   if(!rows.length)return;
   Object.keys(_pending).forEach(k=>delete _pending[k]);
   setSyncSt('syncing');
@@ -74,17 +74,59 @@ async function flushSync(){
   setSyncSt(error?'error':'synced');
   setTimeout(()=>setSyncSt('idle'),2000);
 }
-function scheduleSync(key,val){_pending[key]=val;clearTimeout(_syncT);_syncT=setTimeout(flushSync,1500);}
+// Flush faster (500ms) so a quick refresh is less likely to lose data
+function scheduleSync(key,val){_pending[key]=val;clearTimeout(_syncT);_syncT=setTimeout(flushSync,500);}
+// Also flush on page unload so refreshes don't lose data
+window.addEventListener('beforeunload',()=>{if(Object.keys(_pending).length)flushSync();});
+
+// Smart merge for daysV2: local fields win, cloud fills missing dates/fields
+// This means: import on PC → refresh → still there (local wins)
+//             import on phone → open PC (cold) → also shows (cloud fills missing dates)
+function mergeDays(local,cloud){
+  const merged={...cloud};
+  Object.keys(local||{}).forEach(date=>{
+    if(!merged[date])merged[date]=local[date];
+    else merged[date]={...merged[date],...local[date]}; // local fields override per date
+  });
+  return merged;
+}
+
 async function initSync(){
   if(!_sb)return;
   setSyncSt('syncing');
   const{data}=await _sb.from('dashboard_data').select('key,value');
-  if(data)data.forEach(({key,value})=>{try{localStorage.setItem(key,JSON.stringify(value));}catch{}notifyKey(key,value);});
+  if(data){
+    data.forEach(({key,value})=>{
+      if(key==='daysV2'){
+        const localRaw=localStorage.getItem('daysV2');
+        const local=localRaw?JSON.parse(localRaw):{};
+        const merged=mergeDays(local,value||{});
+        try{localStorage.setItem('daysV2',JSON.stringify(merged));}catch{}
+        notifyKey('daysV2',merged);
+      } else {
+        // For other keys: cloud wins only if local is empty
+        const localRaw=localStorage.getItem(key);
+        if(!localRaw||(()=>{try{const v=JSON.parse(localRaw);return!v||Object.keys(v).length===0;}catch{return true;}})()) {
+          try{localStorage.setItem(key,JSON.stringify(value));}catch{}
+          notifyKey(key,value);
+        }
+      }
+    });
+  }
   setSyncSt('synced');setTimeout(()=>setSyncSt('idle'),1500);
   _sb.channel('dash').on('postgres_changes',{event:'*',schema:'public',table:'dashboard_data'},({new:row})=>{
     if(!row?.key)return;
-    try{localStorage.setItem(row.key,JSON.stringify(row.value));}catch{}
-    notifyKey(row.key,row.value);
+    if(row.key==='daysV2'){
+      // Real-time: apply same smart merge so phone changes appear on PC
+      const localRaw=localStorage.getItem('daysV2');
+      const local=localRaw?JSON.parse(localRaw):{};
+      const merged=mergeDays(local,row.value||{});
+      try{localStorage.setItem('daysV2',JSON.stringify(merged));}catch{}
+      notifyKey('daysV2',merged);
+    } else {
+      try{localStorage.setItem(row.key,JSON.stringify(row.value));}catch{}
+      notifyKey(row.key,row.value);
+    }
   }).subscribe();
 }
 function useSyncStatus(){
@@ -94,11 +136,29 @@ function useSyncStatus(){
 }
 
 // ── useLS ──────────────────────────────────────────────────
+// BUG FIX: side-effects run in useEffect AFTER React resolves functional
+// updaters (e.g. setDays(prev => {...})). Previously JSON.stringify(fn) = undefined.
 function useLS(key,init){
-  const[val,setVal]=useState(()=>{try{const s=localStorage.getItem(key);return s!==null?JSON.parse(s):init;}catch{return init;}});
+  const[val,setVal]=useState(()=>{
+    try{
+      const s=localStorage.getItem(key);
+      // Guard against literal "undefined" string left by old bug
+      if(s===null||s==='undefined')return init;
+      return JSON.parse(s);
+    }catch{return init;}
+  });
+  const mounted=useRef(false);
+  // Subscribe to cloud updates
   useEffect(()=>addListener(key,nv=>setVal(nv)),[key]);
-  const set=useCallback(nv=>{setVal(nv);try{localStorage.setItem(key,JSON.stringify(nv));}catch{}scheduleSync(key,nv);},[key]);
-  return[val,set];
+  // Persist to localStorage + Supabase after every state change (skip first mount)
+  useEffect(()=>{
+    if(!mounted.current){mounted.current=true;return;}
+    if(val===undefined)return;
+    try{localStorage.setItem(key,JSON.stringify(val));}catch{}
+    scheduleSync(key,val);
+  },[key,val]);
+  // Return raw setVal so functional updates (prev=>{...}) work correctly
+  return[val,setVal];
 }
 
 // ── Helpers ────────────────────────────────────────────────
