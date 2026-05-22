@@ -92,41 +92,50 @@ function mergeDays(local,cloud){
 
 async function initSync(){
   if(!_sb)return;
-  setSyncSt('syncing');
-  const{data}=await _sb.from('dashboard_data').select('key,value');
-  if(data){
-    data.forEach(({key,value})=>{
-      if(key==='daysV2'){
+  // Silent background load — no yellow dot on startup
+  try{
+    const{data}=await _sb.from('dashboard_data').select('key,value');
+    if(data){
+      data.forEach(({key,value})=>{
+        if(key==='daysV2'){
+          const localRaw=localStorage.getItem('daysV2');
+          const local=(localRaw&&localRaw!=='undefined')?JSON.parse(localRaw):{};
+          const merged=mergeDays(local,value||{});
+          try{localStorage.setItem('daysV2',JSON.stringify(merged));}catch{}
+          notifyKey('daysV2',merged);
+        } else {
+          // Other v2 keys: cloud only fills if local is empty
+          const localRaw=localStorage.getItem(key);
+          const isEmpty=!localRaw||localRaw==='undefined'||(()=>{try{const v=JSON.parse(localRaw);return!v||Object.keys(v).length===0;}catch{return true;}})();
+          if(isEmpty){
+            try{localStorage.setItem(key,JSON.stringify(value));}catch{}
+            notifyKey(key,value);
+          }
+        }
+      });
+    }
+    setSyncSt('synced');
+    setTimeout(()=>setSyncSt('idle'),1200);
+  }catch(e){
+    setSyncSt('idle');
+  }
+
+  // Real-time: phone changes appear instantly on PC (and vice versa)
+  _sb.channel('dash')
+    .on('postgres_changes',{event:'*',schema:'public',table:'dashboard_data'},({new:row})=>{
+      if(!row?.key)return;
+      if(row.key==='daysV2'){
         const localRaw=localStorage.getItem('daysV2');
-        const local=localRaw?JSON.parse(localRaw):{};
-        const merged=mergeDays(local,value||{});
+        const local=(localRaw&&localRaw!=='undefined')?JSON.parse(localRaw):{};
+        const merged=mergeDays(local,row.value||{});
         try{localStorage.setItem('daysV2',JSON.stringify(merged));}catch{}
         notifyKey('daysV2',merged);
       } else {
-        // For other keys: cloud wins only if local is empty
-        const localRaw=localStorage.getItem(key);
-        if(!localRaw||(()=>{try{const v=JSON.parse(localRaw);return!v||Object.keys(v).length===0;}catch{return true;}})()) {
-          try{localStorage.setItem(key,JSON.stringify(value));}catch{}
-          notifyKey(key,value);
-        }
+        try{localStorage.setItem(row.key,JSON.stringify(row.value));}catch{}
+        notifyKey(row.key,row.value);
       }
-    });
-  }
-  setSyncSt('synced');setTimeout(()=>setSyncSt('idle'),1500);
-  _sb.channel('dash').on('postgres_changes',{event:'*',schema:'public',table:'dashboard_data'},({new:row})=>{
-    if(!row?.key)return;
-    if(row.key==='daysV2'){
-      // Real-time: apply same smart merge so phone changes appear on PC
-      const localRaw=localStorage.getItem('daysV2');
-      const local=localRaw?JSON.parse(localRaw):{};
-      const merged=mergeDays(local,row.value||{});
-      try{localStorage.setItem('daysV2',JSON.stringify(merged));}catch{}
-      notifyKey('daysV2',merged);
-    } else {
-      try{localStorage.setItem(row.key,JSON.stringify(row.value));}catch{}
-      notifyKey(row.key,row.value);
-    }
-  }).subscribe();
+    })
+    .subscribe();
 }
 function useSyncStatus(){
   const[s,setS]=useState(_syncStatus);
@@ -1126,7 +1135,17 @@ function App(){
   const greeting=hr<12?'Goedemorgen':hr<18?'Goedenmiddag':'Goedenavond';
   const dateLbl=now.toLocaleDateString('nl-BE',{weekday:'long',day:'numeric',month:'long'});
 
-  const syncDot=h('div',{title:{syncing:'Synchroniseren…',synced:'Gesynchroniseerd',error:'Sync fout'}[syncSt]||'Sync actief',style:{width:7,height:7,borderRadius:'50%',flexShrink:0,background:{syncing:'#f59e0b',error:'#ef4444',synced:'#22c55e'}[syncSt]||'#3b82f6',boxShadow:syncSt==='synced'?'0 0 6px rgba(34,197,94,.5)':syncSt==='syncing'?'0 0 6px rgba(245,158,11,.5)':'none',animation:syncSt==='syncing'?'pulse 1s infinite':'none'}});
+  // 🟢 synced (na upload) · 🟡 bezig met uploaden · 🔴 fout · (geen dot) = rust
+  const syncDot = syncSt==='idle' ? null : h('div',{
+    title:{syncing:'Opslaan naar cloud…',synced:'Opgeslagen ✓',error:'Sync mislukt — check je verbinding'}[syncSt],
+    style:{
+      width:7,height:7,borderRadius:'50%',flexShrink:0,
+      background:{syncing:'#f59e0b',synced:'#22c55e',error:'#ef4444'}[syncSt],
+      boxShadow:syncSt==='synced'?'0 0 8px rgba(34,197,94,.6)':syncSt==='syncing'?'0 0 6px rgba(245,158,11,.4)':'none',
+      animation:syncSt==='syncing'?'pulse .8s infinite':'none',
+      transition:'background .3s,box-shadow .3s',
+    }
+  });
 
   return h('div',{style:{minHeight:'100vh',background:'#0a0a0a',color:'#fff',fontFamily:'Inter,system-ui,sans-serif'}},
     // Header
