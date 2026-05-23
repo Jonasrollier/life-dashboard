@@ -38,6 +38,7 @@
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
     .anim-fade{animation:fadeIn .2s ease-out}
     .anim-up{animation:slideUp .25s ease-out}
+    .pulse-red{animation:pulse 2s infinite}
   </style>
 </head>
 <body>
@@ -268,68 +269,6 @@ function processImport(raw,days,setDays){
   return{ok:true,msg:`${cnt} record(s) geïmporteerd`+(errs.length?` (${errs.length} fout(en))`:'')} ;
 }
 
-// ── Seed ──────────────────────────────────────────────────
-const SEED={
-'2026-05-22':{
-  nutrition:{goal_kcal:2300,goal_protein:160,goal_carbs:270,goal_fat:70,meals:[
-    {time:'pre_workout',name:'Isostar Protein Bar',items:[{name:'Isostar Chocolate Crispy Bar',amount_g:55,kcal:190,protein:16,carbs:18,fat:7}],totals:{kcal:190,protein:16,carbs:18,fat:7}},
-    {time:'lunch',name:'Wrap met kip en groenten',items:[{name:'4 eieren + beetje boter',amount_g:205,kcal:337,protein:24,carbs:1,fat:24},{name:'Kipfilet Colruyt',amount_g:196,kcal:202,protein:45,carbs:0,fat:2.5},{name:'Poco Loco wrap',amount_g:62,kcal:179,protein:5.8,carbs:28.5,fat:3.7},{name:'IJsbergsalade + komkommer',amount_g:80,kcal:15,protein:1,carbs:3,fat:0},{name:'Cocktailsaus light',amount_g:30,kcal:80,protein:0,carbs:4,fat:7}],totals:{kcal:813,protein:75.8,carbs:36.5,fat:37.2}},
-    {time:'drinks',name:'Yanga sportdrankjes',items:[{name:'Yanga Berry Boost 0.8L',amount_g:800,kcal:48,protein:0,carbs:10,fat:0},{name:'Yanga Passion Fruit 0.8L',amount_g:800,kcal:48,protein:0,carbs:10,fat:0}],totals:{kcal:96,protein:0,carbs:20,fat:0}},
-    {time:'dinner',name:'Koude pasta met hotdogs',items:[{name:'Pasta gekookt',amount_g:180,kcal:240,protein:8,carbs:47,fat:1},{name:'2 hotdogs',amount_g:80,kcal:200,protein:8,carbs:2,fat:17},{name:'6 kipgehaktballetjes',amount_g:120,kcal:220,protein:16,carbs:8,fat:12},{name:'Galbani Mozzarella light',amount_g:125,kcal:150,protein:17,carbs:2,fat:9},{name:'Boni soepbolletjes',amount_g:20,kcal:75,protein:2,carbs:10,fat:3},{name:'Sla',amount_g:30,kcal:5,protein:0,carbs:1,fat:0},{name:'Cocktailsaus light',amount_g:45,kcal:60,protein:0,carbs:5,fat:4}],totals:{kcal:950,protein:51,carbs:75,fat:46}},
-    {time:'late_night',name:'Skyr met pindakaas en frambozen',items:[{name:'Yoplait Skyr naturel',amount_g:170,kcal:105,protein:19,carbs:6,fat:0},{name:'Boni Plan\'t pindakaas crunchy',amount_g:15,kcal:90,protein:4,carbs:3,fat:8},{name:'Bevroren frambozen',amount_g:165,kcal:55,protein:1,carbs:11,fat:0}],totals:{kcal:250,protein:24,carbs:20,fat:8}},
-    {time:'late_night',name:'Extra snacks',items:[{name:'Zonnebloempitten gezouten',amount_g:15,kcal:88,protein:3,carbs:3,fat:8},{name:'Haribo bollen 6 stuks',amount_g:12,kcal:42,protein:0,carbs:10,fat:0},{name:'Cola snoepjes 4 stuks',amount_g:8,kcal:28,protein:0,carbs:7,fat:0}],totals:{kcal:158,protein:3,carbs:20,fat:8}}
-  ]},
-  training:{name:'Schouder & Bicep',start_time:'09:28',duration_minutes:116,volume_kg:9803,calories_burned:435,sets_total:38,exercises:[
-    {name:'Lever Seated Reverse Fly',sets:[{set:'W',weight_kg:32,reps:10},{set:1,weight_kg:59,reps:7},{set:2,weight_kg:52,reps:9},{set:3,weight_kg:45,reps:9}]},
-    {name:'Lever Preacher Curl',sets:[{set:'W',weight_kg:45,reps:10},{set:1,weight_kg:68,reps:7},{set:2,weight_kg:64,reps:6},{set:3,weight_kg:59,reps:6}]},
-    {name:'Dumbbell Incline Curl',sets:[{set:'W',weight_kg:10,reps:10},{set:1,weight_kg:14,reps:7},{set:2,weight_kg:14,reps:9},{set:3,weight_kg:12,reps:11}]},
-    {name:'Lever Seated Shoulder Press',sets:[{set:'W',weight_kg:32,reps:10},{set:1,weight_kg:50,reps:8},{set:2,weight_kg:45,reps:9},{set:3,weight_kg:41,reps:11}]},
-    {name:'Alternate Biceps Curl',sets:[{set:'W',weight_kg:10,reps:20},{set:1,weight_kg:16,reps:10},{set:2,weight_kg:14,reps:12},{set:3,weight_kg:12,reps:14}]},
-    {name:'Lever Lateral Raise',sets:[{set:'W',weight_kg:18,reps:10},{set:1,weight_kg:45,reps:7},{set:2,weight_kg:41,reps:9},{set:3,weight_kg:36,reps:10}]},
-    {name:'Lever Gripless Shrug',sets:[{set:1,weight_kg:50,reps:10},{set:2,weight_kg:50,reps:10},{set:3,weight_kg:50,reps:10}]},
-    {name:'EZ-bar Biceps Curl',sets:[{set:1,weight_kg:20,reps:15},{set:2,weight_kg:25,reps:7},{set:3,weight_kg:25,reps:6}]}
-  ]},
-  samsung_health:{
-    sleep:{bedtime:'03:37',wake_time:'07:55',duration_hours:4.3,actual_sleep_hours:4.1,score:64,score_change:4,score_label:'Redelijk',factors_sleep_score:{actual_sleep_time:'aandacht',deep_sleep:'goed',rem_sleep:'uitstekend',rest:'uitstekend',time_to_fall_asleep:'uitstekend'},stages:{awake_minutes:12,awake_percent:4,rem_minutes:47,rem_percent:18,light_minutes:128,light_percent:51,deep_minutes:71,deep_percent:27},heart_rate_sleep:{average_bpm:52},hrv_sleep:{average_ms:86,max_ms:149},naps:[]},
-    energy_score:{score:63,score_change:-11,label:'Redelijk',advice:'Rustig aandoen',advice_detail:'Je energiescore is redelijk en dit geeft aan dat je het vandaag rustig aan moet doen.',factors:{average_sleep_time:'redelijk',sleep_consistency:'goed',sleep_regularity:'uitstekend',sleep_time:'goed',previous_day_activity:'redelijk',activity_consistency:'goed',heart_rate_shr:'goed',hrv_shrv:'uitstekend'}},
-    activity:{steps:4430,steps_goal:6000,active_minutes:49,active_minutes_goal:90,active_hours:18,floors_climbed:0,calories_activity:172,calories_activity_goal:500,calories_total:1744,calories_training:0,training_minutes:0,elevated_hr_minutes:0,distance_km:3.58}
-  }
-},
-'2026-05-21':{samsung_health:{sleep:{bedtime:'03:33',wake_time:'08:00',duration_hours:4.45,actual_sleep_hours:4.22,score:60,score_change:-4,score_label:'Slecht',stages:{awake_minutes:13,awake_percent:5,rem_minutes:38,rem_percent:15,light_minutes:132,light_percent:52,deep_minutes:71,deep_percent:28},heart_rate_sleep:{average_bpm:53},hrv_sleep:{average_ms:82,max_ms:135},naps:[]},activity:{steps:2299,steps_goal:6000,active_minutes:25,active_minutes_goal:90,calories_activity:85,calories_total:1682,distance_km:1.84}}},
-'2026-05-20':{samsung_health:{sleep:{bedtime:'03:13',wake_time:'07:05',duration_hours:6.88,actual_sleep_hours:6.32,score:66,score_change:2,score_label:'Redelijk',stages:{awake_minutes:20,awake_percent:5,rem_minutes:72,rem_percent:19,light_minutes:190,light_percent:50,deep_minutes:98,deep_percent:26},heart_rate_sleep:{average_bpm:51},hrv_sleep:{average_ms:91,max_ms:158},naps:[{start:'19:19',end:'21:13'},{start:'21:30',end:'22:37'}]},activity:{steps:5385,steps_goal:6000,active_minutes:58,active_minutes_goal:90,calories_activity:192,calories_total:1752,distance_km:4.27}}},
-'2026-05-19':{
-  training:{name:'Rug & Voorarm',duration_minutes:141,volume_kg:12651,calories_burned:673,sets_total:23,exercises:[
-    {name:'Bar Lateral Pulldown',sets:[{set:'W',weight_kg:25,reps:10},{set:1,weight_kg:52,reps:7},{set:2,weight_kg:45,reps:8},{set:3,weight_kg:39,reps:10}]},
-    {name:'Assisted Pull-up',sets:[{set:'W',weight_kg:-27,reps:10},{set:1,weight_kg:0,reps:5},{set:2,weight_kg:-4.5,reps:9},{set:3,weight_kg:-9,reps:11}]},
-    {name:'Lever Back Extension',sets:[{set:'W',weight_kg:59,reps:10},{set:1,weight_kg:79,reps:15},{set:2,weight_kg:73,reps:10},{set:3,weight_kg:66,reps:24}]},
-    {name:'EZ Barbell Reverse Grip Preacher Curl',sets:[{set:'W',weight_kg:8,reps:10},{set:1,weight_kg:18,reps:9},{set:2,weight_kg:15.5,reps:13},{set:3,weight_kg:18,reps:11}]},
-    {name:'Lever Gripless Shrug',sets:[{set:1,weight_kg:50,reps:10},{set:2,weight_kg:50,reps:10},{set:3,weight_kg:50,reps:10}]}
-  ]},
-  samsung_health:{sleep:{bedtime:'02:57',wake_time:'08:15',duration_hours:5.3,actual_sleep_hours:4.87,score:69,score_change:3,score_label:'Redelijk',stages:{awake_minutes:14,awake_percent:5,rem_minutes:55,rem_percent:19,light_minutes:145,light_percent:50,deep_minutes:76,deep_percent:26},heart_rate_sleep:{average_bpm:54},hrv_sleep:{average_ms:88,max_ms:142},naps:[]},activity:{steps:4065,steps_goal:6000,active_minutes:43,active_minutes_goal:90,calories_activity:145,calories_total:1722,distance_km:3.25}}
-},
-'2026-05-18':{
-  training:{name:'Buik & Benen',duration_minutes:102,volume_kg:14817,calories_burned:384,sets_total:39,exercises:[
-    {name:'Lever Total Abdominal Crunch',sets:[{set:1,weight_kg:45,reps:17},{set:2,weight_kg:54,reps:12},{set:3,weight_kg:54,reps:11}]},
-    {name:'Lever Seated Leg Press',sets:[{set:'W',weight_kg:79,reps:10},{set:1,weight_kg:113,reps:10},{set:2,weight_kg:120,reps:10},{set:3,weight_kg:127,reps:10}]},
-    {name:'Lever Seated Hip Abduction',sets:[{set:1,weight_kg:73,reps:7},{set:2,weight_kg:66,reps:11},{set:3,weight_kg:59,reps:13}]},
-    {name:'Captains Chair Straight Leg Raise',sets:[{set:1,weight_kg:0,reps:20},{set:2,weight_kg:0,reps:20},{set:3,weight_kg:0,reps:20}]},
-    {name:'Lever Standing Calf Raise',sets:[{set:1,weight_kg:50,reps:30},{set:2,weight_kg:50,reps:30},{set:3,weight_kg:50,reps:30}]}
-  ]},
-  samsung_health:{sleep:{bedtime:'03:11',wake_time:'07:07',duration_hours:5.2,actual_sleep_hours:4.85,score:64,score_change:-1,score_label:'Redelijk',stages:{awake_minutes:10,awake_percent:3,rem_minutes:52,rem_percent:18,light_minutes:152,light_percent:52,deep_minutes:77,deep_percent:27},heart_rate_sleep:{average_bpm:53},hrv_sleep:{average_ms:84,max_ms:138},naps:[{start:'17:48',end:'19:04'}]},activity:{steps:4469,steps_goal:6000,active_minutes:48,active_minutes_goal:90,calories_activity:169,calories_total:1741,distance_km:3.61}}
-},
-'2026-05-17':{
-  training:{name:'Chest & Tricep',duration_minutes:113,volume_kg:9429,calories_burned:424,sets_total:43,exercises:[
-    {name:'Lever Lying Chest Press',sets:[{set:'W',weight_kg:80,reps:10},{set:'F',weight_kg:130,reps:2},{set:2,weight_kg:125,reps:8},{set:3,weight_kg:120,reps:8}]},
-    {name:'Dumbbell Incline Bench Press',sets:[{set:'W',weight_kg:16,reps:10},{set:1,weight_kg:22,reps:10},{set:2,weight_kg:20,reps:12},{set:3,weight_kg:18,reps:12}]},
-    {name:'Lever Incline Hammer Chest Press',sets:[{set:'W',weight_kg:30,reps:10},{set:1,weight_kg:70,reps:6},{set:2,weight_kg:65,reps:8},{set:3,weight_kg:60,reps:10}]},
-    {name:'Lever Triceps Extension',sets:[{set:'W',weight_kg:27,reps:20},{set:1,weight_kg:54,reps:6},{set:2,weight_kg:50,reps:9},{set:3,weight_kg:50,reps:10}]},
-    {name:'Cable Pushdown',sets:[{set:'W',weight_kg:13.5,reps:10},{set:1,weight_kg:24.8,reps:7},{set:2,weight_kg:22.5,reps:9},{set:3,weight_kg:20.3,reps:10}]}
-  ]},
-  samsung_health:{sleep:{bedtime:'03:46',wake_time:'08:27',duration_hours:5.75,actual_sleep_hours:5.28,score:67,score_change:3,score_label:'Redelijk',stages:{awake_minutes:15,awake_percent:5,rem_minutes:58,rem_percent:18,light_minutes:162,light_percent:51,deep_minutes:83,deep_percent:26},heart_rate_sleep:{average_bpm:52},hrv_sleep:{average_ms:89,max_ms:145},naps:[{start:'14:06',end:'15:10'}]},activity:{steps:2606,steps_goal:6000,active_minutes:28,active_minutes_goal:90,calories_activity:96,calories_total:1690,distance_km:2.10}}
-},
-'2026-05-16':{samsung_health:{sleep:{bedtime:'03:45',wake_time:'10:05',duration_hours:7.4,actual_sleep_hours:6.75,score:77,score_change:8,score_label:'Goed',stages:{awake_minutes:19,awake_percent:5,rem_minutes:81,rem_percent:20,light_minutes:196,light_percent:48,deep_minutes:109,deep_percent:27},heart_rate_sleep:{average_bpm:51},hrv_sleep:{average_ms:96,max_ms:162},naps:[{start:'10:55',end:'12:00'}]},activity:{steps:3120,steps_goal:6000,active_minutes:32,active_minutes_goal:90,calories_activity:115,calories_total:1698,distance_km:2.52}}}
-};
-
 // ── Shared UI ─────────────────────────────────────────────
 function Ring({value,max,size=100,sw=10,color='#3b82f6',children}){
   const r=(size-sw)/2,circ=2*Math.PI*r,p=clamp(value/max,0,1);
@@ -424,14 +363,20 @@ function FloatingImport({days,setDays}){
 // ══════════ TAB 1 — VANDAAG ══════════════════════════════
 function NettoKcal({tot,sh}){
   const burned=sh?.activity?.calories_total||0;
-  if(!burned)return null;
-  const netto=tot.kcal-burned;
+  
+  // FEAT 1: Dynamic BMR Extrapolation
+  const currentHour = new Date().getHours() + new Date().getMinutes() / 60;
+  const bmrBurned = Math.round((2000 / 24) * currentHour);
+  const totalBurned = burned + bmrBurned;
+  
+  const netto=tot.kcal-totalBurned;
   const col=netto>=-500&&netto<=-300?'#22c55e':netto<=0?'#f59e0b':'#ef4444';
+  
   return h('div',{className:'card'},
-    h(CardHdr,{title:'Netto Calorieën',sub:'Ingenomen − totaal verbrand (Samsung Health)'}),
+    h(CardHdr,{title:'Netto Calorieën',sub:'Ingenomen − totaal verbrand (Actief + Rust tot nu)'}),
     h('div',{className:'card-p',style:{paddingTop:4}},
       h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:10}},
-        [['Ingenomen',tot.kcal+' kcal','#3b82f6'],['Verbrand',burned+' kcal','#f59e0b'],['Netto',(netto>0?'+':'')+netto+' kcal',col]].map(([l,v,c])=>
+        [['Ingenomen',tot.kcal+' kcal','#3b82f6'],['Verbrand',totalBurned+' kcal','#f59e0b'],['Netto',(netto>0?'+':'')+netto+' kcal',col]].map(([l,v,c])=>
           h('div',{key:l,style:{background:'#1a1a1a',borderRadius:10,padding:'10px',textAlign:'center'}},
             h('p',{style:{fontSize:10,color:'#525252',margin:'0 0 3px'}},l),
             h('p',{style:{fontSize:14,fontWeight:900,color:c,margin:0}},v)
@@ -459,13 +404,42 @@ function VandaagTab({days}){
   const sl=sh.sleep,ac=sh.activity,en=sh.energy_score;
   const slCol=sl?.actual_sleep_hours>=7?'#22c55e':sl?.actual_sleep_hours>=6?'#f59e0b':'#ef4444';
   const enCol=en?.score>=80?'#22c55e':en?.score>=70?'#3b82f6':en?.score>=50?'#f59e0b':'#ef4444';
+  
+  // FEAT 2: Remaining Macros Values
+  const remK = goals.kcal - tot.kcal;
+  const remP = parseFloat((goals.protein - tot.protein).toFixed(1));
+  const remC = parseFloat((goals.carbs - tot.carbs).toFixed(1));
+  const remF = parseFloat((goals.fat - tot.fat).toFixed(1));
+
+  // FEAT 4: Bedtime Countdown
+  const[now2,setNow2]=useState(new Date());
+  useEffect(()=>{const t=setInterval(()=>setNow2(new Date()),60000);return()=>clearInterval(t);},[]);
+  let target = new Date(now2);
+  target.setHours(0, 30, 0, 0);
+  if (now2.getHours() >= 1) target.setDate(target.getDate() + 1);
+  let ms = target - now2;
+  if (ms < 0) ms += 86400000;
+  const hrsLeft = Math.floor(ms / 3600000);
+  const minsLeft = Math.floor((ms % 3600000) / 60000);
+  const isLate = hrsLeft === 0 || (hrsLeft === 23 && now2.getHours() === 23 && now2.getMinutes() >= 30);
+  
   return h('div',{className:'anim-fade'},
     h('div',{style:{background:'linear-gradient(135deg,rgba(37,99,235,.15),rgba(79,70,229,.1))',border:'1px solid rgba(59,130,246,.2)',borderRadius:'1rem',padding:'1rem',marginBottom:'.75rem'}},
       h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
-        h('div',null,h('p',{style:{fontSize:11,color:'#60a5fa',fontWeight:600,margin:0,textTransform:'uppercase',letterSpacing:'.08em'}},'Vandaag · '+new Date().toLocaleDateString('nl-BE',{weekday:'long',day:'numeric',month:'long'})),h('h2',{style:{fontSize:20,fontWeight:900,margin:'4px 0 0',letterSpacing:'-.02em'}},'Dag van Jonas 💪')),
+        h('div',null,h('p',{style:{fontSize:11,color:'#60a5fa',fontWeight:600,margin:0,textTransform:'uppercase',letterSpacing:'.08em'}},'Vandaag · '+now2.toLocaleDateString('nl-BE',{weekday:'long',day:'numeric',month:'long'})),h('h2',{style:{fontSize:20,fontWeight:900,margin:'4px 0 0',letterSpacing:'-.02em'}},'Dag van Jonas 💪')),
         h('div',{style:{textAlign:'right'}},h('p',{style:{fontSize:24,fontWeight:900,color:'#22c55e',margin:0}},tot.protein+'g'),h('p',{style:{fontSize:10,color:'#737373',margin:0}},'/ '+goals.protein+'g eiwit'))
       )
     ),
+    
+    // Bedtime Banner
+    h('div',{className:isLate?'pulse-red':'',style:{background:isLate?'rgba(239,68,68,.15)':'#1a1a1a', border:isLate?'1px solid #ef4444':'1px solid #2a2a2a', borderRadius:'1rem', padding:'1rem', marginBottom:'.75rem', display:'flex', alignItems:'center', justifyContent:'space-between'}},
+      h('div', null,
+        h('p',{style:{fontSize:11, color:isLate?'#ef4444':'#d4d4d4', fontWeight:700, margin:0, textTransform:'uppercase', letterSpacing:'.05em'}}, isLate ? '⚠️ Lichten Uit!' : 'Tijd tot lichten uit (00:30)'),
+        h('p',{style:{fontSize:18, fontWeight:900, color:isLate?'#ef4444':'#fff', margin:'2px 0 0'}}, `${hrsLeft}u ${minsLeft}m`)
+      ),
+      h('span',{style:{fontSize:24}}, isLate ? '🚨' : '🌙')
+    ),
+
     h('div',{className:'card'},
       h(CardHdr,{title:'Macros vandaag',sub:tot.kcal+' / '+goals.kcal+' kcal'}),
       h('div',{className:'card-p',style:{paddingTop:4}},
@@ -479,6 +453,20 @@ function VandaagTab({days}){
         )
       )
     ),
+    
+    // FEAT 2: Nog Nodig Vandaag Widget
+    h('div',{className:'card'},
+      h(CardHdr,{title:'Nog Nodig Vandaag'}),
+      h('div',{className:'card-p',style:{paddingTop:4,display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:8,textAlign:'center'}},
+        [['Kcal',remK,''],['Eiwit',remP,'g'],['Koolhyd.',remC,'g'],['Vetten',remF,'g']].map(([l,v,u])=>
+          h('div',{key:l,style:{background:'#1a1a1a',borderRadius:8,padding:'8px 4px'}},
+            h('p',{style:{fontSize:10,color:'#525252',margin:'0 0 3px'}},l),
+            h('p',{style:{fontSize:12,fontWeight:800,color:v<0?'#ef4444':'#fff',margin:0}},v+u)
+          )
+        )
+      )
+    ),
+
     h(NettoKcal,{tot,sh}),
     h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:'.75rem'}},
       h('div',{className:'card',style:{margin:0,padding:12,borderTop:`2px solid ${day.training?SESSION_COLS[day.training.name]||'#a855f7':'#222'}`}},
@@ -524,7 +512,7 @@ function VandaagTab({days}){
 }
 
 // ══════════ TAB 2 — VOEDING ══════════════════════════════
-function VoedingTab({days}){
+function VoedingTab({days, setDays}){
   const[sel,setSel]=useState(today());
   useEffect(()=>{if(!days[sel]?.nutrition){const b=Object.keys(days).filter(d=>days[d]?.nutrition?.meals?.length>0).sort().reverse()[0];if(b)setSel(b);}},[days]);
   const day=days[sel]||{};
@@ -535,9 +523,15 @@ function VoedingTab({days}){
   const sorted=Object.keys(days).sort().reverse();
   const chartData=last7().map(d=>{const t=nutTot(days[d]?.nutrition);return{name:new Date(d+'T00:00:00').toLocaleDateString('nl-BE',{weekday:'short'}),kcal:t.kcal,protein:t.protein};});
   const weekAvgProt=Math.round(chartData.filter(d=>d.protein>0).reduce((a,d)=>a+d.protein,0)/Math.max(1,chartData.filter(d=>d.protein>0).length));
+  
   const burned=sh.activity?.calories_total||0;
-  const netto=tot.kcal-burned;
+  const currentHour = sel===today() ? (new Date().getHours() + new Date().getMinutes() / 60) : 24;
+  const bmrBurned = Math.round((2000 / 24) * currentHour);
+  const totalBurned = burned + bmrBurned;
+  const netto=tot.kcal-totalBurned;
+  
   const netCol=netto>=-500&&netto<=-300?'#22c55e':netto<=0?'#f59e0b':'#ef4444';
+  
   return h('div',{className:'anim-fade'},
     h('div',{style:{display:'flex',gap:6,overflowX:'auto',paddingBottom:4,marginBottom:8}},
       sorted.slice(0,10).map(d=>h('button',{key:d,onClick:()=>setSel(d),style:{flexShrink:0,padding:'5px 12px',borderRadius:10,border:'1px solid',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',borderColor:sel===d?'rgba(59,130,246,.4)':'#222',background:sel===d?'rgba(59,130,246,.15)':'#1a1a1a',color:sel===d?'#60a5fa':'#737373'}},fmtD(d)))
@@ -553,8 +547,8 @@ function VoedingTab({days}){
             h(MacroRing,{label:'Vetten',value:tot.fat,max:goals.fat,color:'#ec4899'})
           )
         ),
-        burned>0&&h('div',{style:{background:netCol+'15',border:`1px solid ${netCol}25`,borderRadius:10,padding:'8px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}},
-          h('span',{style:{fontSize:11,color:'#737373'}},'Netto: '+tot.kcal+' − '+burned+' kcal'),
+        totalBurned>0&&h('div',{style:{background:netCol+'15',border:`1px solid ${netCol}25`,borderRadius:10,padding:'8px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}},
+          h('span',{style:{fontSize:11,color:'#737373'}},'Netto: '+tot.kcal+' − '+totalBurned+' kcal'),
           h('span',{style:{fontSize:13,fontWeight:800,color:netCol}},(netto>0?'+':'')+netto+' kcal')
         )
       )
@@ -563,10 +557,16 @@ function VoedingTab({days}){
       h(CardHdr,{title:'Maaltijden',sub:nut.meals.length+' maaltijden'}),
       h('div',{className:'card-p',style:{paddingTop:4,display:'flex',flexDirection:'column',gap:10}},
         nut.meals.map((meal,mi)=>h('div',{key:mi,style:{borderBottom:mi<nut.meals.length-1?'1px solid #1e1e1e':'none',paddingBottom:mi<nut.meals.length-1?10:0}},
+          
+          // FEAT 3: Inline Deletion
           h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:5}},
             h('div',null,h('p',{style:{fontSize:12,fontWeight:700,color:'#e5e5e5',margin:0}},meal.name),h('p',{style:{fontSize:10,color:'#525252',margin:0}},mealLbl[meal.time]||meal.time)),
-            h('div',{style:{textAlign:'right'}},h('p',{style:{fontSize:12,fontWeight:700,color:'#22c55e',margin:0}},meal.totals?.protein+'g'),h('p',{style:{fontSize:10,color:'#737373',margin:0}},meal.totals?.kcal+' kcal'))
+            h('div',{style:{display:'flex',alignItems:'center',gap:12}},
+              h('div',{style:{textAlign:'right'}},h('p',{style:{fontSize:12,fontWeight:700,color:'#22c55e',margin:0}},meal.totals?.protein+'g'),h('p',{style:{fontSize:10,color:'#737373',margin:0}},meal.totals?.kcal+' kcal')),
+              h('button',{onClick:()=>{if(window.confirm('Maaltijd verwijderen?')){const nm=[...nut.meals];nm.splice(mi,1);setDays(prev=>({...prev,[sel]:{...prev[sel],nutrition:{...nut,meals:nm}}}));}},style:{background:'none',border:'none',color:'#ef4444',cursor:'pointer',fontSize:16,padding:'0 4px'}},'🗑️')
+            )
           ),
+
           meal.items&&h('div',{style:{display:'flex',flexDirection:'column',gap:2}},
             meal.items.map((it,ii)=>h('div',{key:ii,style:{display:'flex',justifyContent:'space-between',fontSize:10}},
               h('span',{style:{color:'#737373'}},it.name+(it.amount_g?' ('+it.amount_g+'g)':'')),
@@ -886,7 +886,8 @@ function GezondheidsTab({days}){
 }
 
 // ══════════ TAB 5 — GOALS ════════════════════════════════
-const HABITS=[{id:'protein',lbl:'160g eiwit gehaald',icon:'🥩'},{id:'calories',lbl:'2300 kcal gehaald',icon:'🔥'},{id:'trained',lbl:'Getraind vandaag',icon:'💪'},{id:'sleep',lbl:'7+ uur geslapen',icon:'😴'},{id:'water',lbl:'Voldoende water gedronken',icon:'💧'}];
+// FEAT 5: Desk Bike Tracker added to HABITS
+const HABITS=[{id:'protein',lbl:'160g eiwit gehaald',icon:'🥩'},{id:'calories',lbl:'2300 kcal gehaald',icon:'🔥'},{id:'trained',lbl:'Getraind vandaag',icon:'💪'},{id:'sleep',lbl:'7+ uur geslapen',icon:'😴'},{id:'water',lbl:'Voldoende water gedronken',icon:'💧'},{id:'deskbike',lbl:'Fietspedalen gebruikt (45m+)',icon:'🚴'}];
 const SCHOOL_SEED={deadlines:[{id:'1',title:'AR Museum Modus — Rapport',date:(()=>{const d=new Date();d.setDate(d.getDate()+12);return d.toISOString().split('T')[0];})(),tags:['Unity','AR'],done:false},{id:'2',title:'STM32 Labo 3 indienen',date:(()=>{const d=new Date();d.setDate(d.getDate()+5);return d.toISOString().split('T')[0];})(),tags:['STM32'],done:false}],todos:[{id:'1',t:'Slides AR presentatie',day:'vr',done:false},{id:'2',t:'STM32 code review',day:'ma',done:false}]};
 function calcStreak(hid,hist){let s=0;const n=new Date();for(let i=0;i<365;i++){const d=new Date(n);d.setDate(d.getDate()-i);const k=d.toISOString().split('T')[0];if(hist[k]?.[hid])s++;else break;}return s;}
 function GoalsTab({days}){
@@ -987,7 +988,7 @@ function GoalsTab({days}){
 }
 
 // ══════════ TAB 6 — SYNC ════════════════════════════════
-function SyncTab(){
+function SyncTab({days}){
   const[lastExp,setLastExp]=useLS('lastExport',null);
   const[msg,setMsg]=useState('');
   const KEYS=['daysV2','schoolV2','habitsV2','weightLogV2'];
@@ -1003,6 +1004,17 @@ function SyncTab(){
     const out={_v:3,_date:new Date().toISOString()};
     KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v&&v!=='undefined')try{out[k]=JSON.parse(v);}catch{}});
     navigator.clipboard?.writeText(JSON.stringify(out)).then(()=>{setMsg('✓ Naar klembord gekopieerd!');setTimeout(()=>setMsg(''),2500);}).catch(()=>setMsg('✗ Clipboard niet beschikbaar'));
+  }
+  // FEAT 6: Coach Export String
+  function doExportCoach(){
+    const td = today();
+    const day = days[td] || {};
+    const t = nutTot(day.nutrition);
+    const g = {kcal:day.nutrition?.goal_kcal||2300,protein:day.nutrition?.goal_protein||160,carbs:day.nutrition?.goal_carbs||270,fat:day.nutrition?.goal_fat||70};
+    const sl = day.samsung_health?.sleep;
+    const ac = day.samsung_health?.activity;
+    const str = `Datum: ${fmtD(td)} | Kcal: ${t.kcal}/${g.kcal} | Eiwit: ${t.protein}g/${g.protein}g | Vet: ${t.fat}g/${g.fat}g | Slaap: ${sl?.actual_sleep_hours||0}u (Score: ${sl?.score||0}) | Actief: ${ac?.active_minutes||0} min`;
+    navigator.clipboard?.writeText(str).then(()=>{setMsg('✓ Coach data gekopieerd!');setTimeout(()=>setMsg(''),2500);}).catch(()=>setMsg('✗ Clipboard niet beschikbaar'));
   }
   function doImport(file){
     const reader=new FileReader();
@@ -1024,6 +1036,7 @@ function SyncTab(){
         ),
         h('button',{onClick:doExport,style:{background:'linear-gradient(135deg,#2563eb,#4f46e5)',color:'#fff',border:'none',borderRadius:12,padding:'14px',cursor:'pointer',fontFamily:'inherit',fontSize:14,fontWeight:700}},'📥 Download backup (.json)'),
         h('button',{onClick:doExportClip,style:{background:'#1a1a1a',color:'#d4d4d4',border:'1px solid #222',borderRadius:12,padding:'12px',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:600}},'📋 Kopieer naar klembord'),
+        h('button',{onClick:doExportCoach,style:{background:'rgba(245,158,11,.1)',color:'#fbbf24',border:'1px solid rgba(245,158,11,.3)',borderRadius:12,padding:'12px',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:700}},'📋 Kopieer Data voor Coach'),
         msg&&h('p',{style:{fontSize:12,fontWeight:600,color:msg.startsWith('✓')?'#4ade80':'#f87171',margin:0,textAlign:'center'}},msg)
       )
     ),
@@ -1055,7 +1068,7 @@ function SyncTab(){
 const TABS=[{id:'vandaag',lbl:'Vandaag',icon:'📊'},{id:'voeding',lbl:'Voeding',icon:'🥗'},{id:'training',lbl:'Training',icon:'💪'},{id:'gezond',lbl:'Gezondheid',icon:'😴'},{id:'goals',lbl:'Goals',icon:'🎯'},{id:'sync',lbl:'Sync',icon:'💾'}];
 function App(){
   const[tab,setTab]=useState('vandaag');
-  const[days,setDays]=useLS('daysV2',SEED);
+  const[days,setDays]=useLS('daysV2',{});
   const syncSt=useSyncSt();
   useEffect(()=>{initSync();},[]);
   const now=new Date(),hr=now.getHours();
@@ -1074,11 +1087,11 @@ function App(){
     ),
     h('main',{style:{maxWidth:920,margin:'0 auto',padding:'14px 16px 120px'}},
       tab==='vandaag' &&h(VandaagTab,{days}),
-      tab==='voeding' &&h(VoedingTab,{days}),
+      tab==='voeding' &&h(VoedingTab,{days, setDays}), // Added setDays for deletion
       tab==='training'&&h(TrainingTab,{days}),
       tab==='gezond'  &&h(GezondheidsTab,{days}),
       tab==='goals'   &&h(GoalsTab,{days}),
-      tab==='sync'    &&h(SyncTab)
+      tab==='sync'    &&h(SyncTab,{days}) // Added days for coach export
     ),
     h(FloatingImport,{days,setDays}),
     h('nav',{style:{position:'fixed',bottom:0,left:0,right:0,zIndex:40,background:'rgba(10,10,10,.96)',backdropFilter:'blur(20px)',borderTop:'1px solid #1c1c1c'}},
@@ -1092,4 +1105,3 @@ createRoot(document.getElementById('root')).render(h(App));
 </script>
 </body>
 </html>
-
