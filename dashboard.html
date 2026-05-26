@@ -143,9 +143,12 @@ const uid=()=>Math.random().toString(36).slice(2,9);
 const fmtD=(s)=>new Date(s+'T00:00:00').toLocaleDateString('nl-BE',{day:'numeric',month:'short'});
 const ddiff=(s)=>{const t=new Date(s+'T00:00:00'),n=new Date();n.setHours(0,0,0,0);return Math.round((t-n)/86400000);};
 const pct=(v,m)=>Math.min(Math.round(v/m*100),100);
+const rawPct=(v,m)=>m>0?Math.round(v/m*100):0;
 const clamp=(v,a,b)=>Math.min(Math.max(v,a),b);
 const last7=()=>Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(6-i));return d.toISOString().split('T')[0];});
 const nutTot=(nut)=>(nut?.meals||[]).reduce((a,m)=>({kcal:a.kcal+(m.totals?.kcal||0),protein:a.protein+(m.totals?.protein||0),carbs:a.carbs+(m.totals?.carbs||0),fat:a.fat+(m.totals?.fat||0)}),{kcal:0,protein:0,carbs:0,fat:0});
+// Round macro grams: 1 decimal, trim trailing .0
+const fmtG=v=>{const r=Math.round(v*10)/10;return Number.isInteger(r)?String(r):r.toFixed(1);};
 const mealLbl={pre_workout:'Pre-workout',breakfast:'Ontbijt',lunch:'Lunch',drinks:'Drank',dinner:'Avondeten',snack:'Snack',late_night:'Late night'};
 const SESSION_COLS={'Schouder & Bicep':'#3b82f6','Chest & Tricep':'#ef4444','Buik & Benen':'#22c55e','Rug & Voorarm':'#f59e0b'};
 const FACTOR_ST={uitstekend:{c:'#3b82f6',i:'⭐'},goed:{c:'#22c55e',i:'✓'},redelijk:{c:'#f59e0b',i:'~'},aandacht:{c:'#f59e0b',i:'⚠'},kritiek:{c:'#ef4444',i:'✗'}};
@@ -331,19 +334,27 @@ function FactorBadge({label,value}){
     h('span',{style:{fontSize:10,fontWeight:700,color:s.c}},s.i+' '+value)
   );
 }
-function MacroRing({label,value,max,color,large}){
+// typeB=true → MAX LIMIET (kcal/carbs/fat): green≤100%, red>100%
+// typeB=false → MIN DOEL (protein/water): blue<100%, green≥100%
+function MacroRing({label,value,max,large,typeB}){
   const size=large?150:82,sw=large?13:8;
-  const p2=pct(value,max);
-  const rc=p2>=100?'#22c55e':p2>=80?color:'#ef4444';
-  const unit=label==='Calorieën'?' kcal':'g';
+  const isKcal=label==='Calorieën';
+  const rp=rawPct(value,max);
+  const over=rp>100;
+  const rc=typeB?(over?'#ef4444':'#22c55e'):(over||rp>=100?'#22c55e':'#3b82f6');
+  const unit=isKcal?' kcal':'g';
+  const dispVal=isKcal?Math.round(value):fmtG(value);
+  const dispMax=isKcal?Math.round(max):fmtG(max);
+  const pctLabel=rp+'%';
+  const subCol=over?(typeB?'#f87171':'#4ade80'):'#525252';
   return h('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:6}},
-    h(Ring,{value,max,size,sw,color:rc},
-      h('span',{style:{fontWeight:900,fontSize:large?22:12,color:'#fff',lineHeight:1}},p2+'%'),
-      large&&h('span',{style:{fontSize:11,color:'#737373',marginTop:2}},value+unit)
+    h(Ring,{value:Math.min(value,max),max,size,sw,color:rc},
+      h('span',{style:{fontWeight:900,fontSize:large?20:12,color:over?(typeB?'#f87171':'#4ade80'):'#fff',lineHeight:1}},pctLabel),
+      large&&h('span',{style:{fontSize:11,color:'#737373',marginTop:2}},dispVal+unit)
     ),
     h('div',{style:{textAlign:'center',lineHeight:1.35}},
       h('p',{style:{fontWeight:700,fontSize:large?13:11,color:large?'#fff':'#d4d4d4',margin:0}},label),
-      h('p',{style:{fontSize:10,color:'#525252',margin:0}},value+' / '+max+unit)
+      h('p',{style:{fontSize:10,color:subCol,margin:0,fontWeight:over?600:400}},dispVal+' / '+dispMax+unit+(over?(typeB?' ⚠':' ✓'):''))
     )
   );
 }
@@ -379,35 +390,34 @@ function FloatingImport({days,setDays}){
 }
 
 // ══════════ TAB 1 — VANDAAG ══════════════════════════════
-function NettoKcal({tot,sh}){
+function NettoKcal({tot,sh,goals}){
   const burned=sh?.activity?.calories_total||0;
-  
-  // FEAT 1: Dynamic BMR Extrapolation
-  const currentHour = new Date().getHours() + new Date().getMinutes() / 60;
-  const bmrBurned = Math.round((2000 / 24) * currentHour);
-  const totalBurned = burned + bmrBurned;
-  
+  const currentHour=new Date().getHours()+new Date().getMinutes()/60;
+  const bmrBurned=Math.round((2000/24)*currentHour);
+  const totalBurned=burned+bmrBurned;
   const netto=tot.kcal-totalBurned;
-  const col=netto>=-500&&netto<=-300?'#22c55e':netto<=0?'#f59e0b':'#ef4444';
-  
+  const goalKcal=goals?.kcal||2300;
+  // Netto deficit analysis color (for the netto grid value)
+  const netCol=netto>=-500&&netto<=-300?'#22c55e':netto<=0?'#f59e0b':'#ef4444';
+  // Intake vs goal: the cut status is purely whether intake exceeds the goal budget
+  const intakeOver=Math.round(tot.kcal)>goalKcal;
+  const statusCol=intakeOver?'#ef4444':'#22c55e';
+  const statusMsg=intakeOver
+    ?'✗ Calorie-limiet overschreden (+'+Math.round(tot.kcal-goalKcal)+' kcal)'
+    :'✓ Caloriedoel behaald (Cut veilig)';
   return h('div',{className:'card'},
     h(CardHdr,{title:'Netto Calorieën',sub:'Ingenomen − totaal verbrand (Actief + Rust tot nu)'}),
     h('div',{className:'card-p',style:{paddingTop:4}},
       h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:10}},
-        [['Ingenomen',tot.kcal+' kcal','#3b82f6'],['Verbrand',totalBurned+' kcal','#f59e0b'],['Netto',(netto>0?'+':'')+netto+' kcal',col]].map(([l,v,c])=>
+        [['Ingenomen',Math.round(tot.kcal)+' kcal','#3b82f6'],['Verbrand',totalBurned+' kcal','#f59e0b'],['Netto',(netto>0?'+':'')+Math.round(netto)+' kcal',netCol]].map(([l,v,c])=>
           h('div',{key:l,style:{background:'#1a1a1a',borderRadius:10,padding:'10px',textAlign:'center'}},
             h('p',{style:{fontSize:10,color:'#525252',margin:'0 0 3px'}},l),
             h('p',{style:{fontSize:14,fontWeight:900,color:c,margin:0}},v)
           )
         )
       ),
-      h('div',{style:{background:col+'15',border:`1px solid ${col}30`,borderRadius:10,padding:'8px 12px',textAlign:'center'}},
-        h('p',{style:{fontSize:11,color:col,fontWeight:600,margin:0}},
-          netto>=-500&&netto<=-300?'✓ Perfect deficit voor recompositie (-300 tot -500 kcal)':
-          netto<-500?'⚠ Deficit te groot (>500 kcal) — risico op spierverlies':
-          netto<=-100?'~ Deficit te klein — minder vetverlies dan gepland':
-          '✗ Caloriesurplus — gewicht gaat omhoog'
-        )
+      h('div',{style:{background:statusCol+'15',border:`1px solid ${statusCol}30`,borderRadius:10,padding:'8px 12px',textAlign:'center'}},
+        h('p',{style:{fontSize:11,color:statusCol,fontWeight:600,margin:0}},statusMsg)
       )
     )
   );
@@ -499,19 +509,22 @@ function VandaagTab({days,setTab}){
       h(CardHdr,{title:'Dagdoelen Status'}),
       h('div',{className:'card-p',style:{paddingTop:4,display:'flex',flexDirection:'column',gap:10}},
         [
-          ['🔥 Calorieën',tot.kcal,goals.kcal,'kcal',tot.kcal>goals.kcal?'#ef4444':'#3b82f6'],
-          ['🥩 Eiwit',tot.protein,goals.protein,'g','#22c55e'],
-          ['💧 Water',totalWaterMl,2500,'ml',waterCol],
-        ].map(([lbl,val,max,unit,col])=>{
-          const p=Math.min(Math.round(val/max*100),100);
-          const over=lbl==='🔥 Calorieën'&&val>max;
+          {lbl:'🔥 Calorieën',val:Math.round(tot.kcal),max:goals.kcal,unit:'kcal',typeB:true},
+          {lbl:'🥩 Eiwit',val:parseFloat(fmtG(tot.protein)),max:goals.protein,unit:'g',typeB:false},
+          {lbl:'💧 Water',val:totalWaterMl,max:2500,unit:'ml',typeB:false},
+        ].map(({lbl,val,max,unit,typeB})=>{
+          const rp=max>0?val/max*100:0;
+          const over=rp>100;
+          const col=typeB?(over?'#ef4444':'#22c55e'):(over||rp>=100?'#22c55e':'#3b82f6');
+          const barW=Math.min(rp,100);
+          const suffix=typeB?(over?' ⚠':''):(over?' ✓ Bonus':rp>=100?' ✓':'');
           return h('div',{key:lbl},
             h('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
               h('span',{style:{color:'#737373'}},lbl),
-              h('span',{style:{fontWeight:700,color:over?'#ef4444':p>=100?col:'#d4d4d4'}},val+unit+' / '+max+unit+(over?' ⚠':p>=100?' ✓':''))
+              h('span',{style:{fontWeight:700,color:col}},val+unit+' / '+max+unit+suffix)
             ),
             h('div',{style:{height:6,background:'#1e1e1e',borderRadius:999,overflow:'hidden'}},
-              h('div',{style:{height:'100%',borderRadius:999,width:p+'%',background:over?'#ef4444':col,transition:'width .6s ease'}})
+              h('div',{style:{height:'100%',borderRadius:999,width:barW+'%',background:col,transition:'width .6s ease'}})
             )
           );
         })
@@ -549,11 +562,11 @@ function VandaagTab({days,setTab}){
       h(CardHdr,{title:'Macros vandaag',sub:tot.kcal+' / '+goals.kcal+' kcal'}),
       h('div',{className:'card-p',style:{paddingTop:4}},
         h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-around',padding:'4px 0 12px'}},
-          h(MacroRing,{label:'Eiwit',value:tot.protein,max:goals.protein,color:'#22c55e',large:true}),
+          h(MacroRing,{label:'Eiwit',value:tot.protein,max:goals.protein,large:true}),
           h('div',{style:{display:'flex',flexDirection:'column',gap:14}},
-            h(MacroRing,{label:'Calorieën',value:tot.kcal,max:goals.kcal,color:'#3b82f6'}),
-            h(MacroRing,{label:'Koolhyd.',value:tot.carbs,max:goals.carbs,color:'#f59e0b'}),
-            h(MacroRing,{label:'Vetten',value:tot.fat,max:goals.fat,color:'#ec4899'})
+            h(MacroRing,{label:'Calorieën',value:tot.kcal,max:goals.kcal,typeB:true}),
+            h(MacroRing,{label:'Koolhyd.',value:tot.carbs,max:goals.carbs,typeB:true}),
+            h(MacroRing,{label:'Vetten',value:tot.fat,max:goals.fat,typeB:true})
           )
         )
       )
@@ -562,15 +575,27 @@ function VandaagTab({days,setTab}){
     h('div',{className:'card'},
       h(CardHdr,{title:'Nog Nodig Vandaag'}),
       h('div',{className:'card-p',style:{paddingTop:4,display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:8,textAlign:'center'}},
-        [['Kcal',remK,''],['Eiwit',remP,'g'],['Koolhyd.',remC,'g'],['Vetten',remF,'g']].map(([l,v,u])=>
-          h('div',{key:l,style:{background:'#1a1a1a',borderRadius:8,padding:'8px 4px'}},
-            h('p',{style:{fontSize:10,color:'#525252',margin:'0 0 3px'}},l),
-            h('p',{style:{fontSize:12,fontWeight:800,color:v<0?'#ef4444':'#fff',margin:0}},v+u)
-          )
-        )
+        [
+          {l:'Kcal',rem:goals.kcal-Math.round(tot.kcal),unit:'kcal',typeB:true},
+          {l:'Eiwit',rem:parseFloat((goals.protein-tot.protein).toFixed(1)),unit:'g',typeB:false},
+          {l:'Koolhyd.',rem:parseFloat((goals.carbs-tot.carbs).toFixed(1)),unit:'g',typeB:true},
+          {l:'Vetten',rem:parseFloat((goals.fat-tot.fat).toFixed(1)),unit:'g',typeB:true},
+        ].map(({l,rem,unit,typeB})=>{
+          const over=rem<0;
+          const abs=unit==='kcal'?Math.abs(rem):fmtG(Math.abs(rem));
+          const [lbl,col]=!over
+            ?[abs+unit+' resterend', typeB?'#4ade80':'#a3a3a3']
+            :typeB
+              ?[abs+unit+' over!','#f87171']
+              :['+'+abs+unit+' bonus','#4ade80'];
+          return h('div',{key:l,style:{background:'#1a1a1a',borderRadius:8,padding:'8px 4px'}},
+            h('p',{style:{fontSize:10,color:'#525252',margin:'0 0 4px'}},l),
+            h('p',{style:{fontSize:11,fontWeight:800,color:col,margin:0,lineHeight:1.25}},lbl)
+          );
+        })
       )
     ),
-    h(NettoKcal,{tot,sh}),
+    h(NettoKcal,{tot,sh,goals}),
     // ── Training & Slaap ──────────────────────────────────
     h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:'.75rem'}},
       h('div',{className:'card',style:{margin:0,padding:12,borderTop:`2px solid ${day.training?SESSION_COLS[day.training.name]||'#a855f7':'#222'}`}},
@@ -618,53 +643,66 @@ function VandaagTab({days,setTab}){
 }
 
 // ══════════ TAB 2 — VOEDING ══════════════════════════════
+const MEAL_FORM_INIT={name:'',time:'morning',kcal:'',protein:'',carbs:'',fat:''};
 function VoedingTab({days, setDays}){
   const[sel,setSel]=useState(today());
+  const[mealModal,setMealModal]=useState(false);
+  const[mealForm,setMealForm]=useState(MEAL_FORM_INIT);
   useEffect(()=>{if(!days[sel]?.nutrition){const b=Object.keys(days).filter(d=>days[d]?.nutrition?.meals?.length>0).sort().reverse()[0];if(b)setSel(b);}},[days]);
   const day=days[sel]||{};
   const nut=day.nutrition;
+  function saveMeal(){
+    if(!mealForm.name.trim())return;
+    const meal={name:mealForm.name.trim(),time:mealForm.time,totals:{kcal:Number(mealForm.kcal)||0,protein:Number(mealForm.protein)||0,carbs:Number(mealForm.carbs)||0,fat:Number(mealForm.fat)||0},items:[]};
+    const curNut=nut||{goal_kcal:2300,goal_protein:160,goal_carbs:270,goal_fat:70,meals:[]};
+    setDays(prev=>({...prev,[sel]:{...prev[sel],nutrition:{...curNut,meals:[...(curNut.meals||[]),meal]}}}));
+    setMealForm(MEAL_FORM_INIT);setMealModal(false);
+  }
   const sh=day.samsung_health||{};
   const tot=nutTot(nut);
   const goals={kcal:nut?.goal_kcal||2300,protein:nut?.goal_protein||160,carbs:nut?.goal_carbs||270,fat:nut?.goal_fat||70};
   const sorted=Object.keys(days).sort().reverse();
-  const chartData=last7().map(d=>{const t=nutTot(days[d]?.nutrition);return{name:new Date(d+'T00:00:00').toLocaleDateString('nl-BE',{weekday:'short'}),kcal:t.kcal,protein:t.protein};});
+  const chartData=last7().map(d=>{const t=nutTot(days[d]?.nutrition);return{name:new Date(d+'T00:00:00').toLocaleDateString('nl-BE',{weekday:'short'}),kcal:t.kcal,protein:Math.round(t.protein*10)/10,carbs:Math.round(t.carbs*10)/10,fat:Math.round(t.fat*10)/10};});
   const weekAvgProt=Math.round(chartData.filter(d=>d.protein>0).reduce((a,d)=>a+d.protein,0)/Math.max(1,chartData.filter(d=>d.protein>0).length));
+  const weekAvgCarbs=Math.round(chartData.filter(d=>d.carbs>0).reduce((a,d)=>a+d.carbs,0)/Math.max(1,chartData.filter(d=>d.carbs>0).length));
+  const weekAvgFat=Math.round(chartData.filter(d=>d.fat>0).reduce((a,d)=>a+d.fat,0)/Math.max(1,chartData.filter(d=>d.fat>0).length));
   
   const burned=sh.activity?.calories_total||0;
   const currentHour = sel===today() ? (new Date().getHours() + new Date().getMinutes() / 60) : 24;
   const bmrBurned = Math.round((2000 / 24) * currentHour);
   const totalBurned = burned + bmrBurned;
   const netto=tot.kcal-totalBurned;
-  
   const netCol=netto>=-500&&netto<=-300?'#22c55e':netto<=0?'#f59e0b':'#ef4444';
-  
+  const intakeOver=Math.round(tot.kcal)>goals.kcal;
+  const intakeCol=intakeOver?'#ef4444':'#22c55e';
+
   return h('div',{className:'anim-fade'},
     h('div',{style:{display:'flex',gap:6,overflowX:'auto',paddingBottom:4,marginBottom:8}},
       sorted.slice(0,10).map(d=>h('button',{key:d,onClick:()=>setSel(d),style:{flexShrink:0,padding:'5px 12px',borderRadius:10,border:'1px solid',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',borderColor:sel===d?'rgba(59,130,246,.4)':'#222',background:sel===d?'rgba(59,130,246,.15)':'rgba(255,255,255,.04)',color:sel===d?'#60a5fa':'#737373'}},fmtD(d)))
     ),
     h('div',{className:'card'},
-      h(CardHdr,{title:'Macros',sub:fmtD(sel)+' · '+tot.kcal+'/'+goals.kcal+' kcal'}),
+      h(CardHdr,{title:'Macros',sub:fmtD(sel)+' · '+Math.round(tot.kcal)+'/'+goals.kcal+' kcal'}),
       h('div',{className:'card-p',style:{paddingTop:4}},
         h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-around',padding:'4px 0 14px'}},
-          h(MacroRing,{label:'Eiwit',value:tot.protein,max:goals.protein,color:'#22c55e',large:true}),
+          h(MacroRing,{label:'Eiwit',value:tot.protein,max:goals.protein,large:true}),
           h('div',{style:{display:'flex',flexDirection:'column',gap:14}},
-            h(MacroRing,{label:'Calorieën',value:tot.kcal,max:goals.kcal,color:'#3b82f6'}),
-            h(MacroRing,{label:'Koolhyd.',value:tot.carbs,max:goals.carbs,color:'#f59e0b'}),
-            h(MacroRing,{label:'Vetten',value:tot.fat,max:goals.fat,color:'#ec4899'})
+            h(MacroRing,{label:'Calorieën',value:tot.kcal,max:goals.kcal,typeB:true}),
+            h(MacroRing,{label:'Koolhyd.',value:tot.carbs,max:goals.carbs,typeB:true}),
+            h(MacroRing,{label:'Vetten',value:tot.fat,max:goals.fat,typeB:true})
           )
         ),
-        totalBurned>0&&h('div',{style:{background:netCol+'15',border:`1px solid ${netCol}25`,borderRadius:10,padding:'8px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}},
-          h('span',{style:{fontSize:11,color:'#737373'}},'Netto: '+tot.kcal+' − '+totalBurned+' kcal'),
-          h('span',{style:{fontSize:13,fontWeight:800,color:netCol}},(netto>0?'+':'')+netto+' kcal')
+        totalBurned>0&&h('div',{style:{background:intakeCol+'15',border:`1px solid ${intakeCol}25`,borderRadius:10,padding:'8px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}},
+          h('span',{style:{fontSize:11,color:'#737373'}},'Netto: '+Math.round(tot.kcal)+' − '+totalBurned+' kcal'),
+          h('span',{style:{fontSize:13,fontWeight:800,color:netCol}},(netto>0?'+':'')+Math.round(netto)+' kcal')
         )
       )
     ),
-    nut?.meals?.length>0&&h('div',{className:'card'},
-      h(CardHdr,{title:'Maaltijden',sub:nut.meals.length+' maaltijden'}),
+    h('div',{className:'card'},
+      h(CardHdr,{title:'Maaltijden',sub:(nut?.meals?.length||0)+' maaltijden',
+        action:h('button',{onClick:()=>setMealModal(true),className:'pill-btn',style:{fontSize:10,padding:'4px 11px'}},'+ Maaltijd')}),
       h('div',{className:'card-p',style:{paddingTop:4,display:'flex',flexDirection:'column',gap:10}},
-        nut.meals.map((meal,mi)=>h('div',{key:mi,style:{borderBottom:mi<nut.meals.length-1?'1px solid #1e1e1e':'none',paddingBottom:mi<nut.meals.length-1?10:0}},
-          
-          // FEAT 3: Inline Deletion
+        !(nut?.meals?.length)&&h('p',{style:{fontSize:12,color:'rgba(255,255,255,.3)',textAlign:'center',padding:'1rem 0',margin:0}},'Nog geen maaltijden voor deze dag.'),
+        (nut?.meals||[]).map((meal,mi)=>h('div',{key:mi,style:{borderBottom:mi<(nut?.meals?.length||0)-1?'1px solid #1e1e1e':'none',paddingBottom:mi<(nut?.meals?.length||0)-1?10:0}},
           h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:5}},
             h('div',null,h('p',{style:{fontSize:12,fontWeight:700,color:'#e5e5e5',margin:0}},meal.name),h('p',{style:{fontSize:10,color:'#525252',margin:0}},mealLbl[meal.time]||meal.time)),
             h('div',{style:{display:'flex',alignItems:'center',gap:12}},
@@ -672,7 +710,6 @@ function VoedingTab({days, setDays}){
               h('button',{onClick:()=>{if(window.confirm('Maaltijd verwijderen?')){const nm=[...nut.meals];nm.splice(mi,1);setDays(prev=>({...prev,[sel]:{...prev[sel],nutrition:{...nut,meals:nm}}}));}},style:{background:'none',border:'none',color:'#ef4444',cursor:'pointer',fontSize:16,padding:'0 4px'}},'🗑️')
             )
           ),
-
           meal.items&&h('div',{style:{display:'flex',flexDirection:'column',gap:2}},
             meal.items.map((it,ii)=>h('div',{key:ii,style:{display:'flex',justifyContent:'space-between',fontSize:10}},
               h('span',{style:{color:'#737373'}},it.name+(it.amount_g?' ('+it.amount_g+'g)':'')),
@@ -708,7 +745,69 @@ function VoedingTab({days, setDays}){
         )
       )
     ),
-    h(TplBar,{label:'Voeding JSON',tpl:TPL_VOEDING})
+    h('div',{className:'card'},
+      h(CardHdr,{title:'Week Koolhydraten',sub:'Gem: '+weekAvgCarbs+'g · Limiet: '+goals.carbs+'g'}),
+      h('div',{className:'card-p',style:{height:130,paddingTop:4}},
+        h(ResponsiveContainer,{width:'100%',height:'100%'},
+          h(LineChart,{data:chartData,margin:{top:4,right:8,left:-20,bottom:0}},
+            h(CartesianGrid,{strokeDasharray:'3 3',stroke:'#1e1e1e'}),h(XAxis,{dataKey:'name',tick:{fontSize:10,fill:'#525252'}}),h(YAxis,{tick:{fontSize:9,fill:'#525252'}}),
+            h(Tooltip,{contentStyle:{background:'#1a1a1a',border:'1px solid #262626',borderRadius:8,fontSize:11},formatter:v=>[v+'g','Koolhyd.']}),
+            h(ReferenceLine,{y:goals.carbs,stroke:'#f59e0b',strokeDasharray:'4 4',strokeOpacity:.5}),
+            h(Line,{type:'monotone',dataKey:'carbs',stroke:'#f59e0b',strokeWidth:2,dot:{r:3,fill:'#f59e0b'}})
+          )
+        )
+      )
+    ),
+    h('div',{className:'card'},
+      h(CardHdr,{title:'Week Vetten',sub:'Gem: '+weekAvgFat+'g · Limiet: '+goals.fat+'g'}),
+      h('div',{className:'card-p',style:{height:130,paddingTop:4}},
+        h(ResponsiveContainer,{width:'100%',height:'100%'},
+          h(LineChart,{data:chartData,margin:{top:4,right:8,left:-20,bottom:0}},
+            h(CartesianGrid,{strokeDasharray:'3 3',stroke:'#1e1e1e'}),h(XAxis,{dataKey:'name',tick:{fontSize:10,fill:'#525252'}}),h(YAxis,{tick:{fontSize:9,fill:'#525252'}}),
+            h(Tooltip,{contentStyle:{background:'#1a1a1a',border:'1px solid #262626',borderRadius:8,fontSize:11},formatter:v=>[v+'g','Vetten']}),
+            h(ReferenceLine,{y:goals.fat,stroke:'#ec4899',strokeDasharray:'4 4',strokeOpacity:.5}),
+            h(Line,{type:'monotone',dataKey:'fat',stroke:'#ec4899',strokeWidth:2,dot:{r:3,fill:'#ec4899'}})
+          )
+        )
+      )
+    ),
+    h(TplBar,{label:'Voeding JSON',tpl:TPL_VOEDING}),
+    // ── Add meal modal ────────────────────────────────────
+    h(Modal,{open:mealModal,onClose:()=>setMealModal(false),title:'Maaltijd toevoegen'},
+      h('label',{style:{display:'block',marginBottom:10}},
+        h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Naam'),
+        h('input',{className:'inp',placeholder:'bijv. Avondeten',value:mealForm.name,onChange:e=>setMealForm({...mealForm,name:e.target.value})})
+      ),
+      h('label',{style:{display:'block',marginBottom:10}},
+        h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Tijdslot'),
+        h('select',{className:'inp',value:mealForm.time,onChange:e=>setMealForm({...mealForm,time:e.target.value})},
+          h('option',{value:'morning'},'Ochtend'),
+          h('option',{value:'lunch'},'Lunch'),
+          h('option',{value:'afternoon'},'Namiddag'),
+          h('option',{value:'evening'},'Avond'),
+          h('option',{value:'snack'},'Snack')
+        )
+      ),
+      h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}},
+        h('label',{style:{display:'block'}},
+          h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Calorieën (kcal)'),
+          h('input',{type:'number',min:0,className:'inp',placeholder:'0',value:mealForm.kcal,onChange:e=>setMealForm({...mealForm,kcal:e.target.value})})
+        ),
+        h('label',{style:{display:'block'}},
+          h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Eiwit (g)'),
+          h('input',{type:'number',min:0,className:'inp',placeholder:'0',value:mealForm.protein,onChange:e=>setMealForm({...mealForm,protein:e.target.value})})
+        ),
+        h('label',{style:{display:'block'}},
+          h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Koolhyd. (g)'),
+          h('input',{type:'number',min:0,className:'inp',placeholder:'0',value:mealForm.carbs,onChange:e=>setMealForm({...mealForm,carbs:e.target.value})})
+        ),
+        h('label',{style:{display:'block'}},
+          h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Vetten (g)'),
+          h('input',{type:'number',min:0,className:'inp',placeholder:'0',value:mealForm.fat,onChange:e=>setMealForm({...mealForm,fat:e.target.value})})
+        )
+      ),
+      h('button',{onClick:saveMeal,disabled:!mealForm.name.trim(),style:{width:'100%',background:mealForm.name.trim()?'#2563eb':'rgba(255,255,255,.05)',color:mealForm.name.trim()?'#fff':'#525252',border:'none',borderRadius:10,padding:'11px',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:700}},'Maaltijd toevoegen')
+    )
   );
 }
 
@@ -1124,6 +1223,8 @@ const HABITS=[
   {id:'water',   lbl:'2500ml water gehaald',          icon:'💧', auto:true},
   {id:'deskbike',  lbl:'Fietspedalen gebruikt (45m+)',   icon:'🚴', auto:false},
 ];
+const DEFAULT_VAKKEN=['Cybersecurity','Electronics Advanced 2','Webdevelopment','Introduction to Networks','Entertainment Tech','Digital Technology Advanced'];
+const DEFAULT_PLAN_CATS=['taak','school','sport','werk','persoonlijk'];
 const SCHOOL_SEED={deadlines:[{id:'1',title:'AR Museum Modus — Rapport',date:(()=>{const d=new Date();d.setDate(d.getDate()+12);return d.toISOString().split('T')[0];})(),tags:['Unity','AR'],done:false},{id:'2',title:'STM32 Labo 3 indienen',date:(()=>{const d=new Date();d.setDate(d.getDate()+5);return d.toISOString().split('T')[0];})(),tags:['STM32'],done:false}],todos:[{id:'1',t:'Slides AR presentatie',day:'vr',done:false},{id:'2',t:'STM32 code review',day:'ma',done:false}]};
 function calcWaterMl(day){
   const manual=day?.water_ml||0;
@@ -1168,9 +1269,15 @@ function calcStreak(hid,hist,days){
 function GoalsTab({days,setDays}){
   const td=today();
   const[habits,setHabits]=useLS('habitsV2',{});
+  const[habitsConfig,setHabitsConfig]=useLS('habitsConfig',HABITS);
   const[wLog,setWLog]=useLS('weightLogV2',[{id:'s1',date:'2026-05-22',weight:76}]);
   const[wForm,setWForm]=useState('');
   const[wModal,setWModal]=useState(false);
+  const[habModal,setHabModal]=useState(false);
+  const HF_INIT={icon:'⭐',lbl:''};
+  const[hf,setHf]=useState(HF_INIT);
+  function addHabit(){if(!hf.lbl.trim())return;setHabitsConfig(prev=>[...prev,{id:uid(),icon:hf.icon||'⭐',lbl:hf.lbl.trim(),auto:false}]);setHf(HF_INIT);setHabModal(false);}
+  function delHabit(id){setHabitsConfig(prev=>prev.filter(h=>h.id!==id));}
 
   // Date selector — all dates that have any tracked data, plus today
   const allDates=[...new Set([td,...Object.keys(days)])].sort().reverse();
@@ -1180,7 +1287,7 @@ function GoalsTab({days,setDays}){
   const manualH=habits[selDate]||{};
   const toggle=id=>setHabits(prev=>({...prev,[selDate]:{...(prev[selDate]||{}),[id]:!manualH[id]}}));
   const getChecked=hab=>hab.auto?evalAutoHabit(hab.id,day,days,selDate):!!manualH[hab.id];
-  const done=HABITS.filter(getChecked).length;
+  const done=habitsConfig.filter(getChecked).length;
 
   // Weight: show most recent entry on or before selDate
   const sorted=[...wLog].sort((a,b)=>a.date.localeCompare(b.date));
@@ -1208,27 +1315,31 @@ function GoalsTab({days,setDays}){
     ),
     // ── Habits ────────────────────────────────────────────
     h('div',{className:'card'},
-      h(CardHdr,{title:'Dagelijkse Gewoontes',sub:done+' / '+HABITS.length+' · '+fmtD(selDate)}),
+      h(CardHdr,{title:'Dagelijkse Gewoontes',sub:done+' / '+habitsConfig.length+' · '+fmtD(selDate),
+        action:h('button',{onClick:()=>setHabModal(true),className:'pill-btn',style:{fontSize:10,padding:'4px 11px'}},'+ Gewoonte')}),
       h('div',{className:'card-p',style:{paddingTop:4}},
         h('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:10}},
-          h('div',{className:'pbar',style:{flex:1}},h('div',{className:'pfill',style:{width:Math.round(done/HABITS.length*100)+'%',background:done===HABITS.length?'#22c55e':'#3b82f6'}})),
-          h('span',{style:{fontSize:11,fontWeight:700,color:done===HABITS.length?'#4ade80':'#737373'}},Math.round(done/HABITS.length*100)+'%'+(done===HABITS.length?' 🔥':''))
+          h('div',{className:'pbar',style:{flex:1}},h('div',{className:'pfill',style:{width:Math.round(done/Math.max(1,habitsConfig.length)*100)+'%',background:done===habitsConfig.length?'#22c55e':'#3b82f6'}})),
+          h('span',{style:{fontSize:11,fontWeight:700,color:done===habitsConfig.length?'#4ade80':'#737373'}},Math.round(done/Math.max(1,habitsConfig.length)*100)+'%'+(done===habitsConfig.length?' 🔥':''))
         ),
         h('div',{style:{display:'flex',flexDirection:'column',gap:6}},
-          HABITS.map(hab=>{
+          habitsConfig.map(hab=>{
             const checked=getChecked(hab),streak=calcStreak(hab.id,habits,days);
-            return h('button',{key:hab.id,
-              onClick:hab.auto?undefined:()=>toggle(hab.id),
-              style:{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:12,
-                border:`1px solid ${checked?'rgba(34,197,94,.2)':'#1e1e1e'}`,
-                background:checked?'rgba(34,197,94,.05)':'#1a1a1a',
-                cursor:hab.auto?'default':'pointer',width:'100%',fontFamily:'inherit'}},
-              h('div',{style:{width:22,height:22,borderRadius:'50%',border:`2px solid ${checked?'#22c55e':'#333'}`,background:checked?'#22c55e':'none',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:checked?'0 0 8px rgba(34,197,94,.4)':'none'}},
-                checked&&h('span',{style:{color:'#fff',fontSize:8,fontWeight:900}},'✓')),
-              h('span',{style:{fontSize:16,lineHeight:1}},hab.icon),
-              h('span',{style:{flex:1,fontSize:12,color:checked?'#d4d4d4':'#737373',textAlign:'left'}},hab.lbl),
-              hab.auto&&h('span',{style:{fontSize:9,padding:'1px 5px',borderRadius:4,background:'rgba(99,102,241,.2)',color:'#818cf8',fontWeight:700,flexShrink:0}},'AUTO'),
-              streak>0&&h('span',{style:{fontSize:11,fontWeight:700,color:checked?'#fb923c':'#525252',flexShrink:0}},'🔥 '+streak)
+            return h('div',{key:hab.id,style:{display:'flex',alignItems:'center',gap:6}},
+              h('button',{
+                onClick:hab.auto?undefined:()=>toggle(hab.id),
+                style:{flex:1,display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:12,
+                  border:`1px solid ${checked?'rgba(34,197,94,.2)':'#1e1e1e'}`,
+                  background:checked?'rgba(34,197,94,.05)':'#1a1a1a',
+                  cursor:hab.auto?'default':'pointer',fontFamily:'inherit'}},
+                h('div',{style:{width:22,height:22,borderRadius:'50%',border:`2px solid ${checked?'#22c55e':'#333'}`,background:checked?'#22c55e':'none',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:checked?'0 0 8px rgba(34,197,94,.4)':'none'}},
+                  checked&&h('span',{style:{color:'#fff',fontSize:8,fontWeight:900}},'✓')),
+                h('span',{style:{fontSize:16,lineHeight:1}},hab.icon),
+                h('span',{style:{flex:1,fontSize:12,color:checked?'#d4d4d4':'#737373',textAlign:'left'}},hab.lbl),
+                hab.auto&&h('span',{style:{fontSize:9,padding:'1px 5px',borderRadius:4,background:'rgba(99,102,241,.2)',color:'#818cf8',fontWeight:700,flexShrink:0}},'AUTO'),
+                streak>0&&h('span',{style:{fontSize:11,fontWeight:700,color:checked?'#fb923c':'#525252',flexShrink:0}},'🔥 '+streak)
+              ),
+              h('button',{onClick:()=>delHabit(hab.id),style:{background:'none',border:'none',color:'rgba(255,255,255,.2)',cursor:'pointer',fontSize:13,padding:'4px 6px',borderRadius:6,flexShrink:0}},'🗑️')
             );
           })
         )
@@ -1298,7 +1409,7 @@ function GoalsTab({days,setDays}){
     h('div',{className:'card'},
       h(CardHdr,{title:'Streaks'}),
       h('div',{className:'card-p',style:{paddingTop:4,display:'flex',flexDirection:'column',gap:10}},
-        HABITS.map(hab=>{
+        habitsConfig.map(hab=>{
           const str=calcStreak(hab.id,habits,days);
           return h('div',{key:hab.id,style:{display:'flex',alignItems:'center',gap:8}},
             h('span',{style:{fontSize:14,width:22,textAlign:'center'}},hab.icon),
@@ -1311,71 +1422,212 @@ function GoalsTab({days,setDays}){
           );
         })
       )
+    ),
+    // ── Add habit modal ───────────────────────────────────
+    h(Modal,{open:habModal,onClose:()=>setHabModal(false),title:'Gewoonte toevoegen'},
+      h('div',{style:{display:'grid',gridTemplateColumns:'64px 1fr',gap:8,marginBottom:14}},
+        h('label',{style:{display:'block'}},
+          h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Icoon'),
+          h('input',{className:'inp',style:{textAlign:'center',fontSize:18},placeholder:'⭐',maxLength:2,value:hf.icon,onChange:e=>setHf({...hf,icon:e.target.value})})
+        ),
+        h('label',{style:{display:'block'}},
+          h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Label'),
+          h('input',{className:'inp',placeholder:'bijv. 10.000 stappen gezet',value:hf.lbl,onChange:e=>setHf({...hf,lbl:e.target.value})})
+        )
+      ),
+      h('button',{onClick:addHabit,disabled:!hf.lbl.trim(),style:{width:'100%',background:hf.lbl.trim()?'#2563eb':'rgba(255,255,255,.05)',color:hf.lbl.trim()?'#fff':'#525252',border:'none',borderRadius:10,padding:'11px',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:700}},'Toevoegen')
     )
   );
 }
 
 // ══════════ TAB 6 — SCHOOL ═══════════════════════════════
-function TaskRow({t,done,onToggle}){
+function TaskRow({t,done,submitted,onToggle,onToggleSubmit,onDelete}){
   const diff=ddiff(t.dl);
   const col=done?'#525252':diff<0?'#ef4444':diff<=3?'#f59e0b':'#22c55e';
-  return h('button',{onClick:onToggle,style:{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:10,border:`1px solid ${done?'#1e1e1e':'rgba(59,130,246,.12)'}`,background:done?'#0f0f0f':'#1a1a1a',cursor:'pointer',width:'100%',fontFamily:'inherit',textAlign:'left',opacity:done?.55:1}},
-    h('div',{style:{width:18,height:18,borderRadius:4,border:`2px solid ${done?'#22c55e':'#333'}`,background:done?'#22c55e':'none',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
-      done&&h('span',{style:{color:'#fff',fontSize:8,fontWeight:900}},'✓')),
-    h('div',{style:{flex:1}},
-      h('p',{style:{fontSize:12,fontWeight:600,color:done?'#525252':'#e5e5e5',margin:0,textDecoration:done?'line-through':'none'}},t.title),
-      h('span',{style:{fontSize:9,fontWeight:700,padding:'1px 6px',borderRadius:4,background:col+'25',color:col,marginTop:3,display:'inline-block'}},
-        diff<0?'Verlopen':diff===0?'Vandaag!':diff+'d — '+fmtD(t.dl))
-    )
+  const finished=done&&submitted;
+  function ChkBox({active,color,onClick,label}){
+    return h('button',{onClick,style:{display:'flex',alignItems:'center',gap:6,cursor:'pointer',background:'none',border:'none',padding:0,fontFamily:'inherit'}},
+      h('div',{style:{width:16,height:16,borderRadius:4,border:`2px solid ${active?color:'#333'}`,background:active?color:'none',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all .15s'}},
+        active&&h('span',{style:{color:'#fff',fontSize:7,fontWeight:900,lineHeight:1}},'✓')
+      ),
+      h('span',{style:{fontSize:10,fontWeight:600,color:active?color:'#555'}},label)
+    );
+  }
+  return h('div',{style:{display:'flex',alignItems:'center',gap:6}},
+    h('div',{style:{flex:1,display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:10,
+      border:`1px solid ${finished?'rgba(34,197,94,.2)':done?'rgba(59,130,246,.18)':'rgba(59,130,246,.12)'}`,
+      background:finished?'rgba(34,197,94,.04)':done?'#0f0f0f':'#1a1a1a',
+      opacity:finished?.5:1}},
+      h('div',{style:{display:'flex',flexDirection:'column',gap:5,flexShrink:0}},
+        h(ChkBox,{active:done,color:'#3b82f6',onClick:onToggle,label:'Klaar'}),
+        h(ChkBox,{active:submitted,color:'#22c55e',onClick:onToggleSubmit,label:'Ingediend'})
+      ),
+      h('div',{style:{flex:1}},
+        h('p',{style:{fontSize:12,fontWeight:600,color:finished?'#525252':'#e5e5e5',margin:0,textDecoration:finished?'line-through':'none'}},t.title),
+        h('div',{style:{display:'flex',flexWrap:'wrap',alignItems:'center',gap:5,marginTop:3}},
+          h('span',{style:{fontSize:9,fontWeight:700,padding:'1px 6px',borderRadius:4,background:col+'25',color:col,display:'inline-block'}},
+            diff<0?'Verlopen':diff===0?'Vandaag!':diff+'d — '+fmtD(t.dl)),
+          t.vak&&h('span',{style:{fontSize:9,fontWeight:600,padding:'1px 7px',borderRadius:999,background:'rgba(96,165,250,.12)',color:'#93c5fd',border:'1px solid rgba(96,165,250,.2)',display:'inline-block'}},t.vak)
+        )
+      )
+    ),
+    onDelete&&h('button',{onClick:()=>onDelete(t.id),style:{background:'none',border:'none',color:'rgba(255,255,255,.28)',cursor:'pointer',fontSize:14,padding:'4px 6px',borderRadius:6,flexShrink:0}},'🗑️')
   );
 }
 function SchoolTab(){
   const[tasksDone,setTasksDone]=useLS('schoolTasksV2',{});
+  const[tasksSubmitted,setTasksSubmitted]=useLS('schoolSubmittedV2',{});
+  const[schoolTasks,setSchoolTasks]=useLS('schoolTasksData',SCHOOL_TASKS);
+  const[exams,setExams]=useLS('schoolExams',EXAMS);
+  const[taskModal,setTaskModal]=useState(false);
+  const[examModal,setExamModal]=useState(false);
+  const[vakken,setVakken]=useLS('schoolVakken',DEFAULT_VAKKEN);
+  const[newVakInput,setNewVakInput]=useState('');
+  const TF_INIT={title:'',dl:'',category:'labo',vak:''};
+  const EF_INIT={date:'',title:'',time:'',loc:''};
+  const[tf,setTf]=useState(TF_INIT);
+  const[ef,setEf]=useState(EF_INIT);
+
   const toggle=id=>setTasksDone(prev=>({...prev,[id]:!prev[id]}));
-  const now=new Date();
+  const toggleSubmit=id=>setTasksSubmitted(prev=>({...prev,[id]:!prev[id]}));
+  function addTask(){
+    if(!tf.title.trim()||!tf.dl)return;
+    const t={id:uid(),title:tf.title.trim(),dl:tf.dl,vak:tf.vak};
+    setSchoolTasks(prev=>({...prev,[tf.category]:[...(prev[tf.category]||[]),t]}));
+    setTf(TF_INIT);setTaskModal(false);
+  }
+  function delTask(cat,id){setSchoolTasks(prev=>({...prev,[cat]:(prev[cat]||[]).filter(t=>t.id!==id)}));}
+  function addExam(){
+    if(!ef.date||!ef.title.trim())return;
+    setExams(prev=>[...prev,{...ef,title:ef.title.trim()}].sort((a,b)=>a.date.localeCompare(b.date)));
+    setEf(EF_INIT);setExamModal(false);
+  }
+  function delExam(i){setExams(prev=>prev.filter((_,idx)=>idx!==i));}
+
   return h('div',{className:'anim-fade'},
     // ── Examenrooster ─────────────────────────────────────
     h('div',{className:'card'},
-      h(CardHdr,{title:'Examenrooster',sub:'Juni 2026'}),
+      h(CardHdr,{title:'Examenrooster',sub:'Juni 2026',action:h('button',{onClick:()=>setExamModal(true),className:'pill-btn',style:{fontSize:10,padding:'4px 11px'}},'+ Examen')}),
       h('div',{className:'card-p',style:{paddingTop:4,display:'flex',flexDirection:'column',gap:6}},
-        EXAMS.map((ex,i)=>{
+        exams.map((ex,i)=>{
           const diff=ddiff(ex.date);
           const past=diff<0;
           const urgent=!past&&diff<=7;
           const col=past?'#404040':diff===0?'#ef4444':diff<=3?'#ef4444':diff<=7?'#f59e0b':'#22c55e';
-          return h('div',{key:i,style:{display:'flex',gap:12,padding:'10px 12px',borderRadius:10,
-            background:past?'#0f0f0f':'#1a1a1a',
-            border:`1px solid ${urgent?'rgba(239,68,68,.35)':past?'#1a1a1a':'#222'}`,
-            opacity:past?.5:1}},
-            h('div',{style:{width:42,flexShrink:0,textAlign:'center',paddingTop:2}},
-              h('p',{style:{fontSize:11,fontWeight:800,color:col,margin:0,lineHeight:1}},
-                past?'Klaar':diff===0?'Vandaag':diff+'d'),
-              h('p',{style:{fontSize:9,color:'#525252',margin:'3px 0 0'}},fmtD(ex.date))
+          return h('div',{key:i,style:{display:'flex',alignItems:'center',gap:6}},
+            h('div',{style:{flex:1,display:'flex',gap:12,padding:'10px 12px',borderRadius:10,
+              background:past?'#0f0f0f':'#1a1a1a',
+              border:`1px solid ${urgent?'rgba(239,68,68,.35)':past?'#1a1a1a':'#222'}`,
+              opacity:past?.5:1}},
+              h('div',{style:{width:42,flexShrink:0,textAlign:'center',paddingTop:2}},
+                h('p',{style:{fontSize:11,fontWeight:800,color:col,margin:0,lineHeight:1}},
+                  past?'Klaar':diff===0?'Vandaag':diff+'d'),
+                h('p',{style:{fontSize:9,color:'#525252',margin:'3px 0 0'}},fmtD(ex.date))
+              ),
+              h('div',{style:{flex:1}},
+                h('p',{style:{fontSize:12,fontWeight:700,color:past?'#525252':'#e5e5e5',margin:'0 0 4px'}},ex.title),
+                h('div',{style:{display:'flex',gap:10,flexWrap:'wrap'}},
+                  h('span',{style:{fontSize:9,color:'#737373'}},'⏰ '+ex.time),
+                  h('span',{style:{fontSize:9,color:'#737373'}},'📍 '+ex.loc)
+                )
+              ),
+              urgent&&!past&&h('span',{style:{fontSize:18,flexShrink:0,alignSelf:'center'}},'⚡')
             ),
-            h('div',{style:{flex:1}},
-              h('p',{style:{fontSize:12,fontWeight:700,color:past?'#525252':'#e5e5e5',margin:'0 0 4px'}},ex.title),
-              h('div',{style:{display:'flex',gap:10,flexWrap:'wrap'}},
-                h('span',{style:{fontSize:9,color:'#737373'}},'⏰ '+ex.time),
-                h('span',{style:{fontSize:9,color:'#737373'}},'📍 '+ex.loc)
-              )
-            ),
-            urgent&&!past&&h('span',{style:{fontSize:18,flexShrink:0,alignSelf:'center'}},'⚡')
+            h('button',{onClick:()=>delExam(i),style:{background:'none',border:'none',color:'rgba(255,255,255,.28)',cursor:'pointer',fontSize:14,padding:'4px 6px',borderRadius:6,flexShrink:0}},'🗑️')
           );
-        })
+        }),
+        exams.length===0&&h('p',{style:{fontSize:12,color:'rgba(255,255,255,.3)',textAlign:'center',padding:'1rem 0',margin:0}},'Geen examens.')
       )
     ),
     // ── Labo opdrachten ───────────────────────────────────
     h('div',{className:'card'},
-      h(CardHdr,{title:'Opdrachten — Labo',sub:SCHOOL_TASKS.labo.filter(t=>tasksDone[t.id]).length+' / '+SCHOOL_TASKS.labo.length+' klaar'}),
+      h(CardHdr,{title:'Opdrachten — Labo',sub:(schoolTasks.labo||[]).filter(t=>tasksDone[t.id]).length+' / '+(schoolTasks.labo||[]).length+' klaar',
+        action:h('button',{onClick:()=>{setTf({...TF_INIT,category:'labo'});setTaskModal(true);},className:'pill-btn',style:{fontSize:10,padding:'4px 11px'}},'+ Opdracht')}),
       h('div',{className:'card-p',style:{paddingTop:4,display:'flex',flexDirection:'column',gap:6}},
-        SCHOOL_TASKS.labo.map(t=>h(TaskRow,{key:t.id,t,done:!!tasksDone[t.id],onToggle:()=>toggle(t.id)}))
+        (schoolTasks.labo||[]).map(t=>h(TaskRow,{key:t.id,t,done:!!tasksDone[t.id],submitted:!!tasksSubmitted[t.id],onToggle:()=>toggle(t.id),onToggleSubmit:()=>toggleSubmit(t.id),onDelete:id=>delTask('labo',id)}))
       )
     ),
     // ── Theorie opdrachten ────────────────────────────────
     h('div',{className:'card'},
-      h(CardHdr,{title:'Opdrachten — Theorie',sub:SCHOOL_TASKS.theorie.filter(t=>tasksDone[t.id]).length+' / '+SCHOOL_TASKS.theorie.length+' klaar'}),
+      h(CardHdr,{title:'Opdrachten — Theorie',sub:(schoolTasks.theorie||[]).filter(t=>tasksDone[t.id]).length+' / '+(schoolTasks.theorie||[]).length+' klaar',
+        action:h('button',{onClick:()=>{setTf({...TF_INIT,category:'theorie'});setTaskModal(true);},className:'pill-btn',style:{fontSize:10,padding:'4px 11px'}},'+ Opdracht')}),
       h('div',{className:'card-p',style:{paddingTop:4,display:'flex',flexDirection:'column',gap:6}},
-        SCHOOL_TASKS.theorie.map(t=>h(TaskRow,{key:t.id,t,done:!!tasksDone[t.id],onToggle:()=>toggle(t.id)}))
+        (schoolTasks.theorie||[]).map(t=>h(TaskRow,{key:t.id,t,done:!!tasksDone[t.id],submitted:!!tasksSubmitted[t.id],onToggle:()=>toggle(t.id),onToggleSubmit:()=>toggleSubmit(t.id),onDelete:id=>delTask('theorie',id)}))
+      )
+    ),
+    // ── Add task modal ────────────────────────────────────
+    h(Modal,{open:taskModal,onClose:()=>setTaskModal(false),title:'Opdracht toevoegen'},
+      h('label',{style:{display:'block',marginBottom:10}},
+        h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Naam'),
+        h('input',{className:'inp',placeholder:'Titel van de opdracht…',value:tf.title,onChange:e=>setTf({...tf,title:e.target.value})})
+      ),
+      h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}},
+        h('label',{style:{display:'block'}},
+          h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Deadline'),
+          h('input',{type:'date',className:'inp',value:tf.dl,onChange:e=>setTf({...tf,dl:e.target.value})})
+        ),
+        h('label',{style:{display:'block'}},
+          h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Categorie'),
+          h('select',{className:'inp',value:tf.category,onChange:e=>setTf({...tf,category:e.target.value})},
+            h('option',{value:'labo'},'Labo'),
+            h('option',{value:'theorie'},'Theorie')
+          )
+        )
+      ),
+      h('label',{style:{display:'block',marginBottom:14}},
+        h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:6}},'Vak'),
+        h('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
+          h('button',{onClick:()=>setTf({...tf,vak:''}),style:{fontSize:11,padding:'4px 11px',borderRadius:999,border:'1px solid',cursor:'pointer',fontFamily:'inherit',fontWeight:600,
+            borderColor:tf.vak===''?'rgba(255,255,255,.3)':'rgba(255,255,255,.1)',
+            background:tf.vak===''?'rgba(255,255,255,.08)':'rgba(255,255,255,.04)',
+            color:tf.vak===''?'#e5e5e5':'#737373'}},'— Geen'),
+          vakken.map(v=>h('button',{key:v,onClick:()=>setTf({...tf,vak:v}),style:{fontSize:11,padding:'4px 11px',borderRadius:999,border:'1px solid',cursor:'pointer',fontFamily:'inherit',fontWeight:600,
+            borderColor:tf.vak===v?'rgba(96,165,250,.5)':'rgba(255,255,255,.1)',
+            background:tf.vak===v?'rgba(96,165,250,.15)':'rgba(255,255,255,.04)',
+            color:tf.vak===v?'#93c5fd':'#737373'}},v))
+        )
+      ),
+      h('button',{onClick:addTask,disabled:!tf.title.trim()||!tf.dl,style:{width:'100%',background:tf.title.trim()&&tf.dl?'#2563eb':'rgba(255,255,255,.05)',color:tf.title.trim()&&tf.dl?'#fff':'#525252',border:'none',borderRadius:10,padding:'11px',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:700}},'Opdracht toevoegen')
+    ),
+    // ── Add exam modal ────────────────────────────────────
+    h(Modal,{open:examModal,onClose:()=>setExamModal(false),title:'Examen toevoegen'},
+      h('label',{style:{display:'block',marginBottom:10}},
+        h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Naam'),
+        h('input',{className:'inp',placeholder:'bijv. Cybersecurity (Naam Docent)',value:ef.title,onChange:e=>setEf({...ef,title:e.target.value})})
+      ),
+      h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}},
+        h('label',{style:{display:'block'}},
+          h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Datum'),
+          h('input',{type:'date',className:'inp',value:ef.date,onChange:e=>setEf({...ef,date:e.target.value})})
+        ),
+        h('label',{style:{display:'block'}},
+          h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Tijdstip'),
+          h('input',{className:'inp',placeholder:'bijv. 08:30-10:30',value:ef.time,onChange:e=>setEf({...ef,time:e.target.value})})
+        )
+      ),
+      h('label',{style:{display:'block',marginBottom:14}},
+        h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Lokaal'),
+        h('input',{className:'inp',placeholder:'bijv. BXH-B303',value:ef.loc,onChange:e=>setEf({...ef,loc:e.target.value})})
+      ),
+      h('button',{onClick:addExam,disabled:!ef.date||!ef.title.trim(),style:{width:'100%',background:ef.date&&ef.title.trim()?'#2563eb':'rgba(255,255,255,.05)',color:ef.date&&ef.title.trim()?'#fff':'#525252',border:'none',borderRadius:10,padding:'11px',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:700}},'Examen toevoegen')
+    ),
+    // ── Vakken beheer ─────────────────────────────────────
+    h('div',{className:'card'},
+      h(CardHdr,{title:'Vakken',sub:'Selecteerbaar bij opdrachten en planning'}),
+      h('div',{className:'card-p',style:{paddingTop:4}},
+        h('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginBottom:10}},
+          vakken.map((v,i)=>h('div',{key:v,style:{display:'flex',alignItems:'center',gap:4,background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.1)',borderRadius:999,padding:'3px 10px 3px 12px'}},
+            h('span',{style:{fontSize:12,color:'#d4d4d4',fontWeight:600}},v),
+            h('button',{onClick:()=>setVakken(prev=>prev.filter((_,j)=>j!==i)),style:{background:'none',border:'none',color:'rgba(255,255,255,.3)',cursor:'pointer',fontSize:12,padding:'0 0 0 4px',lineHeight:1}},'×')
+          )),
+          vakken.length===0&&h('p',{style:{fontSize:12,color:'rgba(255,255,255,.3)',margin:0}},'Nog geen vakken.')
+        ),
+        h('div',{style:{display:'flex',gap:8}},
+          h('input',{className:'inp',style:{flex:1},placeholder:'Nieuw vak toevoegen…',value:newVakInput,onChange:e=>setNewVakInput(e.target.value),
+            onKeyDown:e=>{if(e.key==='Enter'&&newVakInput.trim()&&!vakken.includes(newVakInput.trim())){setVakken(prev=>[...prev,newVakInput.trim()]);setNewVakInput('');}}
+          }),
+          h('button',{onClick:()=>{if(newVakInput.trim()&&!vakken.includes(newVakInput.trim())){setVakken(prev=>[...prev,newVakInput.trim()]);setNewVakInput('');}},className:'pill-btn'},'+ Toevoegen')
+        )
       )
     )
   );
@@ -1402,7 +1654,7 @@ function clampPct(v){const n=Number(v);if(isNaN(n))return 0;return Math.round(Ma
 function normTask(t){
   const prog=clampPct(t?.progress_percent??0);
   const done=Boolean(t?.is_completed)||prog>=100;
-  return{id:t?.id||uid(),category:(t?.category||'general').trim(),title:(t?.title||'Nieuwe taak').trim(),description:(t?.description||'').trim(),progress_percent:done?100:prog,is_completed:done,auto_rollover:t?.auto_rollover!==false,priority:t?.priority||'medium'};
+  return{id:t?.id||uid(),category:(t?.category||'general').trim(),vak:(t?.vak||'').trim(),title:(t?.title||'Nieuwe taak').trim(),description:(t?.description||'').trim(),progress_percent:done?100:prog,is_completed:done,auto_rollover:t?.auto_rollover!==false,priority:t?.priority||'medium'};
 }
 function calcPlanMeta(tasks){
   const total=tasks.length,comp=tasks.filter(t=>t.is_completed).length;
@@ -1431,9 +1683,10 @@ function prioStyle(p){
 }
 
 // ── PlanTaskRow ───────────────────────────────────────────
-function PlanTaskRow({task,onToggle,onProgress}){
+function PlanTaskRow({task,onToggle,onProgress,onEdit,onDelete}){
   const done=task.is_completed;
   const trackStyle={flex:1,height:4,WebkitAppearance:'none',appearance:'none',background:`linear-gradient(90deg,#38bdf8 ${task.progress_percent}%,rgba(255,255,255,.1) ${task.progress_percent}%)`,borderRadius:999,outline:'none',cursor:'pointer'};
+  const iconBtn={background:'none',border:'none',cursor:'pointer',padding:'2px 4px',borderRadius:6,lineHeight:1,fontSize:13,color:'rgba(255,255,255,.28)',transition:'color .15s'};
   return h('div',{style:{borderRadius:'1.25rem',border:'1px solid rgba(255,255,255,.08)',background:'rgba(255,255,255,.03)',padding:'14px',backdropFilter:'blur(20px)',transition:'opacity .2s',opacity:done?.82:1}},
     h('div',{style:{display:'flex',alignItems:'flex-start',gap:12}},
       h('button',{onClick:()=>onToggle(task.id),style:{marginTop:2,width:24,height:24,borderRadius:7,border:`2px solid ${done?'rgba(52,211,153,.55)':'rgba(255,255,255,.18)'}`,background:done?'#22c55e':'rgba(255,255,255,.05)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,transition:'all .15s',boxShadow:done?'0 0 12px rgba(34,197,94,.3)':'none'}},
@@ -1450,15 +1703,21 @@ function PlanTaskRow({task,onToggle,onProgress}){
           h('input',{type:'range',min:0,max:100,step:5,value:task.progress_percent,onChange:e=>onProgress(task.id,e.target.value),style:trackStyle}),
           h('span',{style:{fontSize:11,fontWeight:700,color:'rgba(255,255,255,.7)',minWidth:30,textAlign:'right'}},task.progress_percent+'%')
         ),
-        h('div',{style:{marginTop:8}},
-          h('span',{style:{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'.15em',color:'rgba(255,255,255,.3)',border:'1px solid rgba(255,255,255,.08)',borderRadius:999,padding:'1px 8px'}},task.category)
+        h('div',{style:{marginTop:8,display:'flex',gap:5,flexWrap:'wrap'}},
+          h('span',{style:{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'.15em',color:'rgba(255,255,255,.3)',border:'1px solid rgba(255,255,255,.08)',borderRadius:999,padding:'1px 8px'}},task.category),
+          task.vak&&h('span',{style:{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'.1em',color:'rgba(96,165,250,.6)',border:'1px solid rgba(96,165,250,.2)',borderRadius:999,padding:'1px 8px'}},task.vak)
         )
+      ),
+      h('div',{style:{display:'flex',flexDirection:'column',gap:2,flexShrink:0}},
+        h('button',{onClick:()=>onEdit(task),title:'Bewerken',style:iconBtn},'✏️'),
+        h('button',{onClick:()=>onDelete(task.id),title:'Verwijderen',style:iconBtn},'🗑️')
       )
     )
   );
 }
 
 // ── PlanningTab ───────────────────────────────────────────
+const TASK_FORM_INIT={title:'',description:'',category:'taak',vak:'',priority:'normal',auto_rollover:true};
 function PlanningTab(){
   const tdStr=today();
   const seedInit={[PLAN_SEED_DATE]:normPlanDay({type:'planning',date:PLAN_SEED_DATE,tasks:PLAN_SEED_TASKS},PLAN_SEED_DATE)};
@@ -1467,6 +1726,12 @@ function PlanningTab(){
   const[impOpen,setImpOpen]=useState(false);
   const[impRaw,setImpRaw]=useState('');
   const[impMsg,setImpMsg]=useState(null);
+  const[taskModal,setTaskModal]=useState(false);
+  const[editTaskId,setEditTaskId]=useState(null);
+  const[taskForm,setTaskForm]=useState(TASK_FORM_INIT);
+  const[planCats,setPlanCats]=useLS('planCategories',DEFAULT_PLAN_CATS);
+  const[vakken]=useLS('schoolVakken',DEFAULT_VAKKEN);
+  const[newCatInput,setNewCatInput]=useState('');
 
   useEffect(()=>{
     setPlanDays(cur=>{
@@ -1492,6 +1757,17 @@ function PlanningTab(){
     const nextDate=tomorrowOf(tdStr);
     setPlanDays(cur=>({...cur,[tdStr]:normPlanDay(activeDay,tdStr),[nextDate]:buildRollover(activeDay,nextDate)}));
   }
+  function openAddTask(){setEditTaskId(null);setTaskForm(TASK_FORM_INIT);setTaskModal(true);}
+  function openEditTask(task){setEditTaskId(task.id);setTaskForm({title:task.title,description:task.description||'',category:task.category||'taak',vak:task.vak||'',priority:task.priority||'normal',auto_rollover:task.auto_rollover!==false});setTaskModal(true);}
+  function deleteTask(id){const next=activeDay.tasks.filter(t=>t.id!==id);savePlan({...activeDay,tasks:next,meta:calcPlanMeta(next)});}
+  function saveTaskForm(){
+    if(!taskForm.title.trim())return;
+    let next;
+    if(editTaskId){next=activeDay.tasks.map(t=>t.id===editTaskId?normTask({...t,...taskForm}):t);}
+    else{next=[...activeDay.tasks,normTask({...taskForm,id:uid()})];}
+    savePlan({...activeDay,tasks:next,meta:calcPlanMeta(next)});
+    setTaskModal(false);
+  }
   function copyTmpl(){
     const txt=JSON.stringify(PLAN_TMPL,null,2);
     if(navigator.clipboard?.writeText){navigator.clipboard.writeText(txt).then(()=>{setCpMsg('✓ Template gekopieerd!');setTimeout(()=>setCpMsg(''),2200);});}
@@ -1513,7 +1789,10 @@ function PlanningTab(){
     // ── Main card ─────────────────────────────────────────
     h('div',{className:'card'},
       h(CardHdr,{title:'Planning',sub:activeDay.meta.completed_tasks+' / '+activeDay.meta.total_tasks+' voltooid · '+activeDay.meta.overall_progress_percent+'% totaal',
-        action:h('button',{onClick:closeDay,className:'pill-btn',style:{fontSize:10,padding:'4px 11px'}},'📅 Dag afsluiten')}),
+        action:h('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+          h('button',{onClick:openAddTask,className:'pill-btn',style:{fontSize:10,padding:'4px 11px'}},'+ Nieuwe taak'),
+          h('button',{onClick:closeDay,className:'pill-btn',style:{fontSize:10,padding:'4px 11px'}},'📅 Dag afsluiten')
+        )}),
       // Day info
       h('div',{style:{margin:'0 1rem .75rem',padding:'10px 14px',borderRadius:'1.25rem',border:'1px solid rgba(255,255,255,.07)',background:'rgba(255,255,255,.03)'}},
         h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}},
@@ -1533,8 +1812,50 @@ function PlanningTab(){
           h('p',{style:{fontSize:32,margin:'0 0 8px'}},'📅'),
           h('p',{style:{fontSize:13,color:'rgba(255,255,255,.4)',margin:0}},'Geen taken. Kopieer de template of importeer een JSON.')
         ),
-        activeDay.tasks.map(t=>h(PlanTaskRow,{key:t.id,task:t,onToggle:toggleTask,onProgress:changeProgress}))
+        activeDay.tasks.map(t=>h(PlanTaskRow,{key:t.id,task:t,onToggle:toggleTask,onProgress:changeProgress,onEdit:openEditTask,onDelete:deleteTask}))
       )
+    ),
+    // ── Task form modal ───────────────────────────────────
+    h(Modal,{open:taskModal,onClose:()=>setTaskModal(false),title:editTaskId?'Taak bewerken':'Nieuwe taak'},
+      h('label',{style:{display:'block',marginBottom:10}},
+        h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Naam'),
+        h('input',{className:'inp',placeholder:'Taaknaam…',value:taskForm.title,onChange:e=>setTaskForm({...taskForm,title:e.target.value})})
+      ),
+      h('label',{style:{display:'block',marginBottom:10}},
+        h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Beschrijving'),
+        h('textarea',{className:'inp',style:{minHeight:72,resize:'vertical'},placeholder:'Optionele beschrijving…',value:taskForm.description,onChange:e=>setTaskForm({...taskForm,description:e.target.value})})
+      ),
+      h('label',{style:{display:'block',marginBottom:10}},
+        h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:6}},'Categorie'),
+        h('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
+          planCats.map(c=>h('button',{key:c,onClick:()=>setTaskForm({...taskForm,category:c,vak:c==='school'?taskForm.vak:''}),style:{fontSize:11,padding:'4px 11px',borderRadius:999,border:'1px solid',cursor:'pointer',fontFamily:'inherit',fontWeight:600,
+            borderColor:taskForm.category===c?'rgba(59,130,246,.5)':'rgba(255,255,255,.1)',
+            background:taskForm.category===c?'rgba(59,130,246,.15)':'rgba(255,255,255,.04)',
+            color:taskForm.category===c?'#60a5fa':'#737373'}},c))
+        )
+      ),
+      taskForm.category==='school'&&h('label',{style:{display:'block',marginBottom:10}},
+        h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:6}},'Vak'),
+        h('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
+          vakken.map(v=>h('button',{key:v,onClick:()=>setTaskForm({...taskForm,vak:v}),style:{fontSize:11,padding:'4px 11px',borderRadius:999,border:'1px solid',cursor:'pointer',fontFamily:'inherit',fontWeight:600,
+            borderColor:taskForm.vak===v?'rgba(96,165,250,.5)':'rgba(255,255,255,.1)',
+            background:taskForm.vak===v?'rgba(96,165,250,.15)':'rgba(255,255,255,.04)',
+            color:taskForm.vak===v?'#93c5fd':'#737373'}},v))
+        )
+      ),
+      h('label',{style:{display:'block',marginBottom:10}},
+        h('span',{style:{fontSize:11,color:'#737373',display:'block',marginBottom:4}},'Prioriteit'),
+        h('select',{className:'inp',value:taskForm.priority,onChange:e=>setTaskForm({...taskForm,priority:e.target.value})},
+          h('option',{value:'high'},'Hoog'),
+          h('option',{value:'normal'},'Normaal'),
+          h('option',{value:'low'},'Laag')
+        )
+      ),
+      h('label',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:14,cursor:'pointer'}},
+        h('input',{type:'checkbox',checked:taskForm.auto_rollover,onChange:e=>setTaskForm({...taskForm,auto_rollover:e.target.checked}),style:{width:16,height:16,accentColor:'#3b82f6',cursor:'pointer'}}),
+        h('span',{style:{fontSize:12,color:'#a3a3a3'}},'Automatisch doorrollen als onvoltooid')
+      ),
+      h('button',{onClick:saveTaskForm,disabled:!taskForm.title.trim(),style:{width:'100%',background:taskForm.title.trim()?'#2563eb':'rgba(255,255,255,.05)',color:taskForm.title.trim()?'#fff':'#525252',border:'none',borderRadius:10,padding:'11px',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:700}},editTaskId?'Opslaan':'Taak toevoegen')
     ),
     // ── Import modal ──────────────────────────────────────
     h(Modal,{open:impOpen,onClose:()=>{setImpOpen(false);setImpMsg(null);},title:'Planning Importeren'},
@@ -1549,6 +1870,24 @@ function PlanningTab(){
       h('div',{style:{display:'flex',gap:8,marginTop:10}},
         h('button',{onClick:()=>{setImpRaw('');setImpMsg(null);},style:{flex:1,background:'rgba(255,255,255,.08)',color:'#d4d4d4',border:'none',borderRadius:10,padding:'10px',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:600}},'Wissen'),
         h('button',{onClick:doImport,disabled:!impRaw.trim(),style:{flex:2,background:impRaw.trim()?'#2563eb':'rgba(255,255,255,.05)',color:impRaw.trim()?'#fff':'#525252',border:'none',borderRadius:10,padding:'10px',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:700}},'Importeer')
+      )
+    ),
+    // ── Categorieën beheer ────────────────────────────────
+    h('div',{className:'card'},
+      h(CardHdr,{title:'Categorieën',sub:'Selecteerbaar bij elke taak'}),
+      h('div',{className:'card-p',style:{paddingTop:4}},
+        h('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginBottom:10}},
+          planCats.map((c,i)=>h('div',{key:c,style:{display:'flex',alignItems:'center',gap:4,background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.1)',borderRadius:999,padding:'3px 10px 3px 12px'}},
+            h('span',{style:{fontSize:12,color:'#d4d4d4',fontWeight:600}},c),
+            h('button',{onClick:()=>setPlanCats(prev=>prev.filter((_,j)=>j!==i)),style:{background:'none',border:'none',color:'rgba(255,255,255,.3)',cursor:'pointer',fontSize:12,padding:'0 0 0 4px',lineHeight:1,display:'flex',alignItems:'center'}},'×')
+          ))
+        ),
+        h('div',{style:{display:'flex',gap:8}},
+          h('input',{className:'inp',style:{flex:1},placeholder:'Nieuwe categorie…',value:newCatInput,onChange:e=>setNewCatInput(e.target.value),
+            onKeyDown:e=>{if(e.key==='Enter'&&newCatInput.trim()&&!planCats.includes(newCatInput.trim())){setPlanCats(prev=>[...prev,newCatInput.trim()]);setNewCatInput('');}}
+          }),
+          h('button',{onClick:()=>{if(newCatInput.trim()&&!planCats.includes(newCatInput.trim())){setPlanCats(prev=>[...prev,newCatInput.trim()]);setNewCatInput('');}},className:'pill-btn'},'+ Toevoegen')
+        )
       )
     ),
     // ── Template / Import bar (onderaan) ──────────────────
