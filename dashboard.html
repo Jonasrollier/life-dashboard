@@ -11,25 +11,37 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     *{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
-    html{background:#0a0a0a;color-scheme:dark}
-    body{background:#0a0a0a;color:#f5f5f5;font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior:none;margin:0}
-    ::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+    html{background:#05070c;color-scheme:dark}
+    body{
+      background:radial-gradient(circle at top left,rgba(56,189,248,.18),transparent 28%),
+        radial-gradient(circle at top right,rgba(59,130,246,.14),transparent 26%),
+        linear-gradient(180deg,#08111a 0%,#05070c 58%,#04050a 100%);
+      color:#f5f5f5;font-family:'Inter',system-ui,sans-serif;
+      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+      overscroll-behavior:none;margin:0;min-height:100vh}
+    body::before{content:'';position:fixed;inset:0;pointer-events:none;
+      background-image:radial-gradient(rgba(255,255,255,.04) 1px,transparent 1px);
+      background-size:22px 22px;opacity:.16;
+      mask-image:linear-gradient(to bottom,rgba(0,0,0,.65),transparent 100%);
+      -webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.65),transparent 100%)}
+    ::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:2px}
     input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
-    .card{background:#141414;border:1px solid #222;border-radius:1rem;overflow:hidden;margin-bottom:.75rem}
+    input[type=range]{accent-color:#38bdf8;cursor:pointer}
+    .card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:1.5rem;overflow:hidden;margin-bottom:.75rem;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
     .card-p{padding:1rem}
-    .inp{width:100%;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:.75rem;padding:.625rem .75rem;font-size:.875rem;color:#fff;outline:none;font-family:inherit}
-    .inp:focus{border-color:rgba(59,130,246,.5)}.inp::placeholder{color:#525252}
+    .inp{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:.75rem;padding:.625rem .75rem;font-size:.875rem;color:#fff;outline:none;font-family:inherit}
+    .inp:focus{border-color:rgba(59,130,246,.5)}.inp::placeholder{color:rgba(255,255,255,.25)}
     .btn-blue{background:#2563eb;color:#fff;font-size:.875rem;font-weight:700;padding:.75rem;border-radius:.75rem;border:none;cursor:pointer;font-family:inherit;width:100%}
     .btn-blue:hover{background:#3b82f6}
-    .tag{font-size:.625rem;padding:2px 8px;border-radius:999px;border:1px solid #2a2a2a;background:none;color:#525252;cursor:pointer;font-family:inherit}
+    .tag{font-size:.625rem;padding:2px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:none;color:rgba(255,255,255,.35);cursor:pointer;font-family:inherit}
     .tag.on{background:rgba(59,130,246,.2);border-color:rgba(59,130,246,.4);color:#60a5fa}
-    .fab{position:fixed;bottom:5rem;right:1rem;z-index:60;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#4f46e5);border:none;color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 24px rgba(37,99,235,.5)}
-    @media(min-width:640px){.fab{bottom:1.5rem;right:1.5rem}}
-    .modal-bg{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;padding:1rem;background:rgba(0,0,0,.75);backdrop-filter:blur(6px)}
+    .fab{position:fixed;bottom:5.5rem;right:1rem;z-index:60;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#4f46e5);border:none;color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 24px rgba(37,99,235,.5)}
+    @media(min-width:640px){.fab{bottom:5rem;right:1.5rem}}
+    .modal-bg{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;padding:1rem;background:rgba(0,0,0,.75);backdrop-filter:blur(8px)}
     @media(min-width:640px){.modal-bg{align-items:center}}
-    .modal-box{width:100%;max-width:36rem;background:#161616;border:1px solid #2a2a2a;border-radius:1rem;box-shadow:0 25px 50px rgba(0,0,0,.6)}
+    .modal-box{width:100%;max-width:36rem;background:rgba(14,17,26,.93);border:1px solid rgba(255,255,255,.1);border-radius:1.5rem;box-shadow:0 25px 50px rgba(0,0,0,.65);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px)}
     .modal-body{padding:1.25rem;max-height:82vh;overflow-y:auto}
-    .pbar{height:6px;background:#1e1e1e;border-radius:999px;overflow:hidden}
+    .pbar{height:6px;background:rgba(255,255,255,.07);border-radius:999px;overflow:hidden}
     .pfill{height:100%;border-radius:999px;transition:width .8s cubic-bezier(.4,0,.2,1)}
     .pr-gold{display:inline-flex;align-items:center;gap:3px;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#fbbf24;font-size:.6rem;font-weight:800;padding:2px 6px;border-radius:999px}
     .pr-silver{display:inline-flex;align-items:center;gap:3px;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.3);color:#94a3b8;font-size:.6rem;font-weight:800;padding:2px 6px;border-radius:999px}
@@ -39,6 +51,9 @@
     .anim-fade{animation:fadeIn .2s ease-out}
     .anim-up{animation:slideUp .25s ease-out}
     .pulse-red{animation:pulse 2s infinite}
+    .glass-bar{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:1.5rem;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);padding:10px 14px;margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+    .pill-btn{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.88);font-size:11px;font-weight:700;padding:5px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.12);cursor:pointer;font-family:inherit;transition:background .15s}
+    .pill-btn:hover{background:rgba(255,255,255,.18)}
   </style>
 </head>
 <body>
@@ -186,7 +201,7 @@ function getWeekDates(offset=0){
     const d=new Date(now);d.setDate(d.getDate()-dow-offset*7+i);return d.toISOString().split('T')[0];
   });
 }
-const slCol5=v=>v>=8?'#16a34a':v>=7?'#22c55e':v>=6?'#4ade80':v>=5.5?'#f59e0b':'#ef4444';
+const slCol5=v=>v>=8?'#16a34a':v>=7?'#22c55e':v>=6?'#4ade80':v>=5.5?'#eab308':v>=5?'#f59e0b':'#ef4444';
 function weekVolByMuscle(days,offset=0){
   const wk=getWeekDates(offset);
   const vol={};
@@ -428,8 +443,10 @@ function VandaagTab({days,setTab}){
   const urgentTasks=allTasks.filter(t=>!tasksDone[t.id]&&ddiff(t.dl)>=0&&ddiff(t.dl)<=7);
   const hasUrgent=urgentExams.length>0||urgentTasks.length>0;
 
-  // Planning & Water
-  const planning=days[td]?.planning||[];
+  // Planning (nieuw systeem) & Water
+  const[planDaysVand,]=useLS('planningDaysV2',{});
+  const planTasks=(planDaysVand?.[td]?.tasks)||[];
+  const planDone=planTasks.filter(t=>t.is_completed).length;
   const totalWaterMl=calcWaterMl(day);
   const waterPct=Math.min(Math.round(totalWaterMl/2500*100),100);
   const waterCol=totalWaterMl>=2500?'#22c55e':totalWaterMl>=1500?'#3b82f6':'#ef4444';
@@ -502,27 +519,28 @@ function VandaagTab({days,setTab}){
     ),
     // ── Dagplanning ───────────────────────────────────────
     h('div',{className:'card'},
-      h(CardHdr,{title:'Dagplanning',sub:planning.length>0?planning.length+' items':'Geen planning',
-        action:planning.length===0&&h(SmBtn,{onClick:()=>setTab('planning')},'Maak aan')}),
+      h(CardHdr,{title:'Dagplanning',
+        sub:planTasks.length>0?planDone+' / '+planTasks.length+' voltooid':'Geen planning',
+        action:planTasks.length===0&&h(SmBtn,{onClick:()=>setTab('planning')},'Maak aan')}),
       h('div',{className:'card-p',style:{paddingTop:4}},
-        planning.length===0
+        planTasks.length===0
           ?h('div',{style:{textAlign:'center',padding:'18px 0'}},
               h('p',{style:{fontSize:28,margin:'0 0 6px'}},'📅'),
               h('p',{style:{fontSize:11,color:'#525252',margin:'0 0 10px'}},'Geen planning voor vandaag.'),
               h('button',{onClick:()=>setTab('planning'),style:{background:'rgba(37,99,235,.15)',border:'1px solid rgba(59,130,246,.3)',color:'#60a5fa',borderRadius:8,padding:'7px 16px',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700}},'Maak planning voor vandaag')
             )
-          :h('div',{style:{display:'flex',flexDirection:'column',gap:3}},
-              planning.slice(0,6).map((item,i)=>{
-                const icon=PLAN_ICONS[item.type]||PLAN_ICONS.other;
-                const tc=PLAN_COLS[item.type]||PLAN_COLS.other;
-                return h('div',{key:i,style:{display:'flex',alignItems:'center',gap:8,padding:'5px 6px',borderRadius:8,background:'#1a1a1a'}},
-                  h('span',{style:{fontSize:13,lineHeight:1}},icon),
-                  item.time&&h('span',{style:{fontSize:10,fontWeight:700,color:'#737373',minWidth:36,flexShrink:0}},item.time),
-                  h('span',{style:{flex:1,fontSize:11,color:'#e5e5e5',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},item.task),
-                  h('span',{style:{width:7,height:7,borderRadius:'50%',background:tc,flexShrink:0}})
+          :h('div',{style:{display:'flex',flexDirection:'column',gap:4}},
+              planTasks.slice(0,6).map((task)=>{
+                const prioCol=task.priority==='high'?'#fbbf24':task.priority==='low'?'#4ade80':'#60a5fa';
+                return h('div',{key:task.id,style:{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:10,background:task.is_completed?'rgba(34,197,94,.05)':'rgba(255,255,255,.04)',border:`1px solid ${task.is_completed?'rgba(34,197,94,.15)':'rgba(255,255,255,.06)'}`}},
+                  h('div',{style:{width:16,height:16,borderRadius:5,border:`2px solid ${task.is_completed?'#22c55e':'rgba(255,255,255,.2)'}`,background:task.is_completed?'#22c55e':'none',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                    task.is_completed&&h('span',{style:{color:'#fff',fontSize:8,fontWeight:900,lineHeight:1}},'✓')
+                  ),
+                  h('span',{style:{flex:1,fontSize:11,color:task.is_completed?'rgba(255,255,255,.45)':'#e5e5e5',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:task.is_completed?'line-through':'none'}},task.title),
+                  h('span',{style:{fontSize:10,fontWeight:700,color:task.is_completed?'#4ade80':prioCol,flexShrink:0}},task.progress_percent+'%')
                 );
               }),
-              planning.length>6&&h('p',{style:{fontSize:10,color:'#525252',margin:'5px 0 0',textAlign:'center'}},'+'+( planning.length-6)+' meer items')
+              planTasks.length>6&&h('p',{style:{fontSize:10,color:'#525252',margin:'5px 0 0',textAlign:'center'}},'+'+( planTasks.length-6)+' meer taken')
             )
       )
     ),
@@ -622,7 +640,7 @@ function VoedingTab({days, setDays}){
   
   return h('div',{className:'anim-fade'},
     h('div',{style:{display:'flex',gap:6,overflowX:'auto',paddingBottom:4,marginBottom:8}},
-      sorted.slice(0,10).map(d=>h('button',{key:d,onClick:()=>setSel(d),style:{flexShrink:0,padding:'5px 12px',borderRadius:10,border:'1px solid',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',borderColor:sel===d?'rgba(59,130,246,.4)':'#222',background:sel===d?'rgba(59,130,246,.15)':'#1a1a1a',color:sel===d?'#60a5fa':'#737373'}},fmtD(d)))
+      sorted.slice(0,10).map(d=>h('button',{key:d,onClick:()=>setSel(d),style:{flexShrink:0,padding:'5px 12px',borderRadius:10,border:'1px solid',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',borderColor:sel===d?'rgba(59,130,246,.4)':'#222',background:sel===d?'rgba(59,130,246,.15)':'rgba(255,255,255,.04)',color:sel===d?'#60a5fa':'#737373'}},fmtD(d)))
     ),
     h('div',{className:'card'},
       h(CardHdr,{title:'Macros',sub:fmtD(sel)+' · '+tot.kcal+'/'+goals.kcal+' kcal'}),
@@ -689,7 +707,8 @@ function VoedingTab({days, setDays}){
           )
         )
       )
-    )
+    ),
+    h(TplBar,{label:'Voeding JSON',tpl:TPL_VOEDING})
   );
 }
 
@@ -874,10 +893,11 @@ function TrainingTab({days}){
   const session=days[sel]?.training;
   return h('div',{className:'anim-fade'},
     h('div',{style:{display:'flex',gap:6,marginBottom:10}},
-      ['kalender','progressie'].map(v=>h('button',{key:v,onClick:()=>setView(v),style:{padding:'6px 16px',borderRadius:10,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',borderColor:view===v?'rgba(59,130,246,.4)':'#222',background:view===v?'rgba(59,130,246,.15)':'#1a1a1a',color:view===v?'#60a5fa':'#737373',textTransform:'capitalize'}},v))
+      ['kalender','progressie'].map(v=>h('button',{key:v,onClick:()=>setView(v),style:{padding:'6px 16px',borderRadius:10,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',borderColor:view===v?'rgba(59,130,246,.4)':'#222',background:view===v?'rgba(59,130,246,.15)':'rgba(255,255,255,.04)',color:view===v?'#60a5fa':'#737373',textTransform:'capitalize'}},v))
     ),
     view==='kalender'&&h('div',null,h(TrainingCalendar,{days,selDate:sel,onSelect:setSel}),session?h(SessionCard,{session,allMaxes,date:sel,days}):h('div',{style:{textAlign:'center',padding:'2rem',color:'#525252',fontSize:13}},'Geen training op '+fmtD(sel))),
-    view==='progressie'&&h(ProgressieSection,{days})
+    view==='progressie'&&h(ProgressieSection,{days}),
+    h(TplBar,{label:'Training JSON',tpl:TPL_TRAINING})
   );
 }
 
@@ -968,7 +988,7 @@ function GezondheidsTab({days}){
   const kcalMax=Math.max(Math.ceil(Math.max(...intakeVals.filter(v=>v!=null),...burnedVals.filter(v=>v!=null),1500)/500)*500,2000);
   return h('div',{className:'anim-fade'},
     h('div',{style:{display:'flex',gap:6,overflowX:'auto',paddingBottom:4,marginBottom:8}},
-      sorted.slice(0,10).map(d=>h('button',{key:d,onClick:()=>setSelDate(d),style:{flexShrink:0,padding:'5px 12px',borderRadius:10,border:'1px solid',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',borderColor:selDate===d?'rgba(59,130,246,.4)':'#222',background:selDate===d?'rgba(59,130,246,.15)':'#1a1a1a',color:selDate===d?'#60a5fa':'#737373'}},fmtD(d)))
+      sorted.slice(0,10).map(d=>h('button',{key:d,onClick:()=>setSelDate(d),style:{flexShrink:0,padding:'5px 12px',borderRadius:10,border:'1px solid',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',borderColor:selDate===d?'rgba(59,130,246,.4)':'#222',background:selDate===d?'rgba(59,130,246,.15)':'rgba(255,255,255,.04)',color:selDate===d?'#60a5fa':'#737373'}},fmtD(d)))
     ),
     sl&&en&&h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:'.75rem'}},
       h('div',{className:'card',style:{margin:0,padding:12}},
@@ -1067,7 +1087,8 @@ function GezondheidsTab({days}){
           h(SvgGroupedBars,{groups:trend7.map((_,i)=>[intakeVals[i]||0,burnedVals[i]||0]),labels:trendLabels,colors:['#3b82f6','#f97316'],yMax:kcalMax})
         )
       )
-    )
+    ),
+    h(TplBar,{label:'Gezondheid JSON',tpl:TPL_GEZOND})
   );
 }
 
@@ -1360,148 +1381,187 @@ function SchoolTab(){
   );
 }
 
-// ══════════ TAB 7 — PLANNING ═════════════════════════════
+// ══════════ TAB 7 — PLANNING (task tracker) ══════════════
 const PLAN_ICONS={food:'🍎',gym:'🏋️',school:'💻',guitar:'🎸',rest:'😴',other:'📌'};
 const PLAN_COLS={food:'#22c55e',gym:'#ef4444',school:'#3b82f6',guitar:'#a855f7',rest:'#6b7280',other:'#525252'};
-const DAG_NAMES=['Ma','Di','Wo','Do','Vr','Za','Zo'];
-function getWeekForDate(dateStr){
-  const d=new Date(dateStr+'T00:00:00');
-  const dow=(d.getDay()+6)%7;
-  return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(d.getDate()-dow+i);return x.toISOString().split('T')[0];});
+
+// ── Planning seed & template ──────────────────────────────
+const PLAN_SEED_DATE='2026-05-26';
+const PLAN_SEED_TASKS=[
+  {id:'task_001',category:'webdevelopment',title:'Website updates',description:'Template knop toevoegen en de look streamlinen.',progress_percent:0,is_completed:false,auto_rollover:true,priority:'high'},
+  {id:'task_002',category:'webdevelopment',title:'Website webdevelopment maken',description:'Kernfunctionaliteiten van de webdev applicatie opbouwen.',progress_percent:0,is_completed:false,auto_rollover:true,priority:'high'},
+  {id:'task_003',category:'webdevelopment',title:'Taken webdevelopment afwerken',description:'De resterende openstaande deadlines en bugs oplossen.',progress_percent:0,is_completed:false,auto_rollover:true,priority:'medium'},
+  {id:'task_004',category:'hardware',title:'Entertainment tech hersolderen',description:'Verbindingen controleren, printplaat herstellen en solderen.',progress_percent:0,is_completed:false,auto_rollover:true,priority:'medium'},
+  {id:'task_005',category:'electronics',title:'Elektronica: alles snappen',description:"Theorieblokken doornemen, schema's analyseren en formules beheersen.",progress_percent:0,is_completed:false,auto_rollover:true,priority:'high'},
+  {id:'task_006',category:'cybersecurity',title:'Cybersecurity podcast uitzoeken',description:'Interessante en leerzame podcasts selecteren voor tijdens passieve uren.',progress_percent:0,is_completed:false,auto_rollover:true,priority:'low'},
+];
+const PLAN_TMPL={type:'planning',date:'',meta:{total_tasks:0,completed_tasks:0,overall_progress_percent:0},tasks:[{id:'task_001',category:'algemeen',title:'Taaknaam',description:'Beschrijving',progress_percent:0,is_completed:false,auto_rollover:true,priority:'medium'}]};
+
+// ── Planning helpers ──────────────────────────────────────
+function clampPct(v){const n=Number(v);if(isNaN(n))return 0;return Math.round(Math.max(0,Math.min(100,n))/5)*5;}
+function normTask(t){
+  const prog=clampPct(t?.progress_percent??0);
+  const done=Boolean(t?.is_completed)||prog>=100;
+  return{id:t?.id||uid(),category:(t?.category||'general').trim(),title:(t?.title||'Nieuwe taak').trim(),description:(t?.description||'').trim(),progress_percent:done?100:prog,is_completed:done,auto_rollover:t?.auto_rollover!==false,priority:t?.priority||'medium'};
 }
-function getMonthDates(dateStr){
-  const d=new Date(dateStr+'T00:00:00');
-  const y=d.getFullYear(),m=d.getMonth();
-  const firstDay=new Date(y,m,1),lastDay=new Date(y,m+1,0);
-  const startDow=(firstDay.getDay()+6)%7;
-  const dates=[];
-  for(let i=0;i<startDow;i++)dates.push(null);
-  for(let i=1;i<=lastDay.getDate();i++)dates.push(new Date(y,m,i).toISOString().split('T')[0]);
-  while(dates.length%7!==0)dates.push(null);
-  return dates;
+function calcPlanMeta(tasks){
+  const total=tasks.length,comp=tasks.filter(t=>t.is_completed).length;
+  const avg=total?Math.round(tasks.reduce((s,t)=>s+clampPct(t.progress_percent),0)/total):0;
+  return{total_tasks:total,completed_tasks:comp,overall_progress_percent:avg};
 }
-function PlanningTab({days,setDays}){
-  const td=today();
-  const allDates=[...new Set([td,...Object.keys(days)])].sort().reverse();
-  const[selDate,setSelDate]=useState(allDates[0]||td);
-  const[view,setView]=useState('dag');
-  const[importOpen,setImportOpen]=useState(false);
-  const[importRaw,setImportRaw]=useState('');
-  const[importMsg,setImportMsg]=useState(null);
-  const planning=days[selDate]?.planning||[];
+function normPlanDay(day,fallback){
+  const td2=typeof fallback==='string'?fallback:today();
+  const tasks=Array.isArray(day?.tasks)?day.tasks.map(normTask):[];
+  return{type:'planning',date:typeof day?.date==='string'&&day.date?day.date:td2,meta:calcPlanMeta(tasks),tasks};
+}
+function tomorrowOf(ds){const d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+1);return d.toISOString().split('T')[0];}
+function latestPlanDay(planDays){
+  const entries=Object.values(planDays||{});
+  if(!entries.length)return normPlanDay({type:'planning',date:PLAN_SEED_DATE,tasks:PLAN_SEED_TASKS},PLAN_SEED_DATE);
+  return entries.map(d=>normPlanDay(d,d?.date||today())).sort((a,b)=>a.date.localeCompare(b.date)).at(-1);
+}
+function buildRollover(src,newDate){
+  const tasks=(src?.tasks||[]).filter(t=>!t.is_completed&&t.auto_rollover).map(t=>normTask({...t,id:uid()}));
+  return normPlanDay({type:'planning',date:newDate,tasks},newDate);
+}
+function prioStyle(p){
+  if(p==='high')return{border:'1px solid rgba(251,191,36,.3)',background:'rgba(251,191,36,.1)',color:'#fde68a'};
+  if(p==='low')return{border:'1px solid rgba(52,211,153,.3)',background:'rgba(52,211,153,.1)',color:'#6ee7b7'};
+  return{border:'1px solid rgba(96,165,250,.3)',background:'rgba(96,165,250,.1)',color:'#bfdbfe'};
+}
+
+// ── PlanTaskRow ───────────────────────────────────────────
+function PlanTaskRow({task,onToggle,onProgress}){
+  const done=task.is_completed;
+  const trackStyle={flex:1,height:4,WebkitAppearance:'none',appearance:'none',background:`linear-gradient(90deg,#38bdf8 ${task.progress_percent}%,rgba(255,255,255,.1) ${task.progress_percent}%)`,borderRadius:999,outline:'none',cursor:'pointer'};
+  return h('div',{style:{borderRadius:'1.25rem',border:'1px solid rgba(255,255,255,.08)',background:'rgba(255,255,255,.03)',padding:'14px',backdropFilter:'blur(20px)',transition:'opacity .2s',opacity:done?.82:1}},
+    h('div',{style:{display:'flex',alignItems:'flex-start',gap:12}},
+      h('button',{onClick:()=>onToggle(task.id),style:{marginTop:2,width:24,height:24,borderRadius:7,border:`2px solid ${done?'rgba(52,211,153,.55)':'rgba(255,255,255,.18)'}`,background:done?'#22c55e':'rgba(255,255,255,.05)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,transition:'all .15s',boxShadow:done?'0 0 12px rgba(34,197,94,.3)':'none'}},
+        done&&h('span',{style:{color:'#fff',fontSize:11,fontWeight:900,lineHeight:1}},'✓')
+      ),
+      h('div',{style:{flex:1,minWidth:0}},
+        h('div',{style:{display:'flex',flexWrap:'wrap',alignItems:'center',gap:6,marginBottom:task.description?4:8}},
+          h('h3',{style:{fontSize:13,fontWeight:700,color:done?'rgba(255,255,255,.5)':'#fff',margin:0,textDecoration:done?'line-through':'none',letterSpacing:'-.01em'}},task.title),
+          h('span',{style:{...prioStyle(task.priority),fontSize:9,fontWeight:800,padding:'1px 7px',borderRadius:999,textTransform:'uppercase',letterSpacing:'.14em'}},task.priority),
+          task.auto_rollover&&h('span',{style:{border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.05)',color:'rgba(255,255,255,.45)',fontSize:9,fontWeight:700,padding:'1px 7px',borderRadius:999,textTransform:'uppercase',letterSpacing:'.1em'}},'↺ Rollover')
+        ),
+        task.description&&h('p',{style:{fontSize:11,color:'rgba(255,255,255,.48)',margin:'0 0 10px',lineHeight:1.5}},task.description),
+        h('div',{style:{display:'flex',alignItems:'center',gap:10,marginTop:4}},
+          h('input',{type:'range',min:0,max:100,step:5,value:task.progress_percent,onChange:e=>onProgress(task.id,e.target.value),style:trackStyle}),
+          h('span',{style:{fontSize:11,fontWeight:700,color:'rgba(255,255,255,.7)',minWidth:30,textAlign:'right'}},task.progress_percent+'%')
+        ),
+        h('div',{style:{marginTop:8}},
+          h('span',{style:{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'.15em',color:'rgba(255,255,255,.3)',border:'1px solid rgba(255,255,255,.08)',borderRadius:999,padding:'1px 8px'}},task.category)
+        )
+      )
+    )
+  );
+}
+
+// ── PlanningTab ───────────────────────────────────────────
+function PlanningTab(){
+  const tdStr=today();
+  const seedInit={[PLAN_SEED_DATE]:normPlanDay({type:'planning',date:PLAN_SEED_DATE,tasks:PLAN_SEED_TASKS},PLAN_SEED_DATE)};
+  const[planDays,setPlanDays]=useLS('planningDaysV2',seedInit);
+  const[cpMsg,setCpMsg]=useState('');
+  const[impOpen,setImpOpen]=useState(false);
+  const[impRaw,setImpRaw]=useState('');
+  const[impMsg,setImpMsg]=useState(null);
+
+  useEffect(()=>{
+    setPlanDays(cur=>{
+      if(cur&&cur[tdStr])return cur;
+      const src=latestPlanDay(cur);
+      return{...(cur||{}),[tdStr]:buildRollover(src,tdStr)};
+    });
+  },[tdStr]);
+
+  const activeDay=planDays&&planDays[tdStr]?normPlanDay(planDays[tdStr],tdStr):latestPlanDay(planDays);
+
+  function savePlan(nextDay){setPlanDays(cur=>({...cur,[tdStr]:normPlanDay(nextDay,tdStr)}));}
+  function toggleTask(id){
+    const next=activeDay.tasks.map(t=>t.id===id?normTask({...t,is_completed:!t.is_completed,progress_percent:!t.is_completed?100:0}):t);
+    savePlan({...activeDay,tasks:next,meta:calcPlanMeta(next)});
+  }
+  function changeProgress(id,val){
+    const p=clampPct(val);
+    const next=activeDay.tasks.map(t=>t.id===id?normTask({...t,progress_percent:p,is_completed:p>=100}):t);
+    savePlan({...activeDay,tasks:next,meta:calcPlanMeta(next)});
+  }
+  function closeDay(){
+    const nextDate=tomorrowOf(tdStr);
+    setPlanDays(cur=>({...cur,[tdStr]:normPlanDay(activeDay,tdStr),[nextDate]:buildRollover(activeDay,nextDate)}));
+  }
+  function copyTmpl(){
+    const txt=JSON.stringify(PLAN_TMPL,null,2);
+    if(navigator.clipboard?.writeText){navigator.clipboard.writeText(txt).then(()=>{setCpMsg('✓ Template gekopieerd!');setTimeout(()=>setCpMsg(''),2200);});}
+    else{const el=document.createElement('textarea');el.value=txt;document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);setCpMsg('✓ Template gekopieerd!');setTimeout(()=>setCpMsg(''),2200);}
+  }
   function doImport(){
     try{
-      const items=JSON.parse(importRaw);
-      if(!Array.isArray(items))throw new Error('Moet een array zijn');
-      setDays(prev=>({...prev,[selDate]:{...(prev[selDate]||{}),planning:items}}));
-      setImportMsg({ok:true,msg:'✓ Planning geladen voor '+fmtD(selDate)});
-      setImportRaw('');
-      setTimeout(()=>{setImportOpen(false);setImportMsg(null);},1000);
-    }catch(e){setImportMsg({ok:false,msg:'✗ Ongeldige JSON — '+e.message});}
+      const data=JSON.parse(impRaw);
+      if(!data||!Array.isArray(data.tasks))throw new Error('tasks array ontbreekt');
+      const imp=normPlanDay(data,data.date||tdStr);
+      setPlanDays(cur=>({...cur,[imp.date]:imp}));
+      setImpMsg({ok:true,msg:'✓ Planning geladen voor '+imp.date});
+      setImpRaw('');
+      setTimeout(()=>{setImpOpen(false);setImpMsg(null);},1000);
+    }catch(e){setImpMsg({ok:false,msg:'✗ '+e.message});}
   }
-  const weekDates=getWeekForDate(selDate);
-  const monthDates=getMonthDates(selDate);
-  const selMonthLabel=new Date(selDate+'T00:00:00').toLocaleDateString('nl-BE',{month:'long',year:'numeric'});
+
   return h('div',{className:'anim-fade'},
-    // Date selector — only in Dag view
-    view==='dag'&&h('div',{style:{display:'flex',gap:6,overflowX:'auto',paddingBottom:4,marginBottom:8}},
-      allDates.slice(0,14).map(d=>h('button',{key:d,onClick:()=>setSelDate(d),style:{flexShrink:0,padding:'5px 12px',borderRadius:10,border:'1px solid',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',borderColor:selDate===d?'rgba(59,130,246,.4)':'#222',background:selDate===d?'rgba(59,130,246,.15)':'#1a1a1a',color:selDate===d?'#60a5fa':'#737373'}},fmtD(d)))
-    ),
-    // View toggle
-    h('div',{style:{display:'flex',background:'#1a1a1a',borderRadius:12,padding:3,marginBottom:10,gap:2}},
-      ['dag','week','maand'].map(v=>h('button',{key:v,onClick:()=>setView(v),style:{flex:1,padding:'8px 4px',borderRadius:9,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,background:view===v?'#2563eb':'none',color:view===v?'#fff':'#525252',transition:'all .15s'}},v==='dag'?'Dag':v==='week'?'Week':'Maand'))
-    ),
-    // ── DAG VIEW ──────────────────────────────────────────
-    view==='dag'&&h('div',{className:'card'},
-      h(CardHdr,{title:'Dagplanning',sub:fmtD(selDate)+' · '+planning.length+' items',
-        action:h(BlueBtn,{onClick:()=>{setImportOpen(true);setImportMsg(null);}},'+ Voeg Toe')}),
-      h('div',{className:'card-p',style:{paddingTop:4}},
-        planning.length===0&&h('div',{style:{textAlign:'center',padding:'32px 16px'}},
-          h('p',{style:{fontSize:32,margin:0}},'📅'),
-          h('p',{style:{fontSize:12,color:'#525252',margin:'8px 0 4px'}},'Geen planning voor '+fmtD(selDate)),
-          h('p',{style:{fontSize:11,color:'#404040',margin:0}},'Gebruik "+ Voeg Toe" om een schema te importeren')
+    // ── Main card ─────────────────────────────────────────
+    h('div',{className:'card'},
+      h(CardHdr,{title:'Planning',sub:activeDay.meta.completed_tasks+' / '+activeDay.meta.total_tasks+' voltooid · '+activeDay.meta.overall_progress_percent+'% totaal',
+        action:h('button',{onClick:closeDay,className:'pill-btn',style:{fontSize:10,padding:'4px 11px'}},'📅 Dag afsluiten')}),
+      // Day info
+      h('div',{style:{margin:'0 1rem .75rem',padding:'10px 14px',borderRadius:'1.25rem',border:'1px solid rgba(255,255,255,.07)',background:'rgba(255,255,255,.03)'}},
+        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}},
+          h('div',null,
+            h('p',{style:{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'.28em',color:'rgba(255,255,255,.38)',margin:0}},'Actieve dag'),
+            h('p',{style:{fontSize:13,fontWeight:700,color:'#fff',margin:'2px 0 0'}},activeDay.date)
+          ),
+          h('div',{style:{display:'flex',gap:6}},
+            h('span',{style:{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'.12em',color:'rgba(255,255,255,.45)',border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.04)',padding:'3px 10px',borderRadius:999}},activeDay.meta.total_tasks+' taken'),
+            h('span',{style:{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'.12em',color:'rgba(255,255,255,.45)',border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.04)',padding:'3px 10px',borderRadius:999}},activeDay.meta.completed_tasks+' klaar')
+          )
+        )
+      ),
+      // Tasks
+      h('div',{style:{padding:'0 1rem 1rem',display:'flex',flexDirection:'column',gap:10}},
+        activeDay.tasks.length===0&&h('div',{style:{borderRadius:'1.25rem',border:'1px solid rgba(255,255,255,.07)',background:'rgba(255,255,255,.03)',padding:'2rem',textAlign:'center'}},
+          h('p',{style:{fontSize:32,margin:'0 0 8px'}},'📅'),
+          h('p',{style:{fontSize:13,color:'rgba(255,255,255,.4)',margin:0}},'Geen taken. Kopieer de template of importeer een JSON.')
         ),
-        planning.length>0&&h('div',{style:{position:'relative'}},
-          h('div',{style:{position:'absolute',left:47,top:0,bottom:0,width:1,background:'#222',pointerEvents:'none'}}),
-          planning.map((item,i)=>{
-            const icon=PLAN_ICONS[item.type]||PLAN_ICONS.other;
-            const tc=PLAN_COLS[item.type]||PLAN_COLS.other;
-            const isLast=i===planning.length-1;
-            return h('div',{key:i,style:{display:'flex',gap:0,paddingBottom:isLast?0:16}},
-              h('div',{style:{width:56,flexShrink:0,display:'flex',flexDirection:'column',alignItems:'center',gap:3,paddingTop:2}},
-                h('p',{style:{fontSize:11,fontWeight:800,color:'#a3a3a3',margin:0,lineHeight:1}},item.time||''),
-                h('div',{style:{width:28,height:28,borderRadius:'50%',background:tc+'20',border:`1px solid ${tc}40`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,zIndex:1}},icon)
-              ),
-              h('div',{style:{flex:1,paddingTop:4,paddingBottom:isLast?0:4}},
-                h('p',{style:{fontSize:13,fontWeight:700,color:'#e5e5e5',margin:'0 0 2px'}},item.task),
-                item.note&&h('p',{style:{fontSize:10,color:'#737373',margin:'0 0 4px'}},item.note),
-                h('span',{style:{fontSize:9,fontWeight:700,padding:'1px 6px',borderRadius:4,background:tc+'20',color:tc}},item.type||'overig')
-              )
-            );
-          })
-        )
+        activeDay.tasks.map(t=>h(PlanTaskRow,{key:t.id,task:t,onToggle:toggleTask,onProgress:changeProgress}))
       )
     ),
-    // ── WEEK VIEW ─────────────────────────────────────────
-    view==='week'&&h('div',{className:'card'},
-      h(CardHdr,{title:'Week Overzicht',sub:fmtD(weekDates[0])+' – '+fmtD(weekDates[6])}),
-      h('div',{className:'card-p',style:{paddingTop:4}},
-        h('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:4}},
-          weekDates.map((d,i)=>{
-            const items=days[d]?.planning||[];
-            const isToday=d===td,isSel=d===selDate;
-            return h('div',{key:d,onClick:()=>{setSelDate(d);setView('dag');},
-              style:{background:isSel?'rgba(37,99,235,.15)':isToday?'rgba(255,255,255,.04)':'#1a1a1a',border:`1px solid ${isSel?'rgba(59,130,246,.4)':isToday?'rgba(255,255,255,.1)':'#222'}`,borderRadius:10,padding:'6px 3px',cursor:'pointer',minHeight:80}},
-              h('p',{style:{fontSize:10,fontWeight:700,color:isToday?'#60a5fa':'#737373',margin:'0 0 1px',textAlign:'center'}},DAG_NAMES[i]),
-              h('p',{style:{fontSize:9,color:'#525252',margin:'0 0 4px',textAlign:'center'}},d.slice(8)),
-              items.slice(0,3).map((it,j)=>h('div',{key:j,style:{display:'flex',alignItems:'center',gap:2,marginBottom:1,paddingLeft:2,paddingRight:2}},
-                h('div',{style:{width:4,height:4,borderRadius:'50%',background:PLAN_COLS[it.type]||PLAN_COLS.other,flexShrink:0}}),
-                h('p',{style:{fontSize:7,color:'#a3a3a3',margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}},it.task)
-              )),
-              items.length>3&&h('p',{style:{fontSize:7,color:'#525252',margin:'2px 0 0',textAlign:'center'}},'+'+( items.length-3))
-            );
-          })
-        )
-      )
-    ),
-    // ── MAAND VIEW ────────────────────────────────────────
-    view==='maand'&&h('div',{className:'card'},
-      h(CardHdr,{title:'Maand Overzicht',sub:selMonthLabel}),
-      h('div',{className:'card-p',style:{paddingTop:4}},
-        h('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,marginBottom:4}},
-          DAG_NAMES.map(n=>h('p',{key:n,style:{fontSize:9,fontWeight:700,color:'#525252',margin:0,textAlign:'center'}},n))
-        ),
-        h('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2}},
-          monthDates.map((d,i)=>{
-            if(!d)return h('div',{key:'e'+i,style:{minHeight:44}});
-            const items=days[d]?.planning||[];
-            const isToday=d===td,isSel=d===selDate;
-            const types=[...new Set(items.map(it=>it.type||'other'))].slice(0,3);
-            return h('div',{key:d,onClick:()=>{setSelDate(d);setView('dag');},
-              style:{background:isSel?'rgba(37,99,235,.2)':isToday?'rgba(255,255,255,.04)':'#1a1a1a',border:`1px solid ${isSel?'rgba(59,130,246,.5)':isToday?'rgba(255,255,255,.08)':'#1e1e1e'}`,borderRadius:8,padding:'4px 2px',cursor:'pointer',minHeight:44,display:'flex',flexDirection:'column',alignItems:'center'}},
-              h('p',{style:{fontSize:10,fontWeight:isSel||isToday?800:500,color:isSel?'#60a5fa':isToday?'#fff':'#737373',margin:'0 0 2px'}},d.slice(8)),
-              h('div',{style:{display:'flex',gap:2,flexWrap:'wrap',justifyContent:'center'}},
-                types.map((t,j)=>h('div',{key:j,style:{width:6,height:6,borderRadius:'50%',background:PLAN_COLS[t]||PLAN_COLS.other}}))
-              )
-            );
-          })
-        )
-      )
-    ),
-    // ── Modal ─────────────────────────────────────────────
-    h(Modal,{open:importOpen,onClose:()=>{setImportOpen(false);setImportMsg(null);},title:'Planning Importeren — '+fmtD(selDate)},
-      h('p',{style:{fontSize:11,color:'#737373',margin:'0 0 10px'}},'Plak een JSON-array. Velden: time (string), task (string), type (food/gym/school/guitar/rest), note (optioneel).'),
-      h('textarea',{className:'inp',style:{minHeight:160,resize:'vertical',fontFamily:'monospace',fontSize:11},
-        placeholder:'[{"time":"08:00","task":"Ontbijt","type":"food"},{"time":"10:00","task":"Studeren","type":"school"}]',
-        value:importRaw,onChange:e=>setImportRaw(e.target.value)}),
-      importMsg&&h('div',{style:{margin:'8px 0',padding:'8px 12px',borderRadius:8,fontSize:12,fontWeight:600,
-        background:importMsg.ok?'rgba(34,197,94,.1)':'rgba(239,68,68,.1)',
-        border:`1px solid ${importMsg.ok?'rgba(34,197,94,.25)':'rgba(239,68,68,.25)'}`,
-        color:importMsg.ok?'#4ade80':'#f87171'}},importMsg.msg),
+    // ── Import modal ──────────────────────────────────────
+    h(Modal,{open:impOpen,onClose:()=>{setImpOpen(false);setImpMsg(null);},title:'Planning Importeren'},
+      h('p',{style:{fontSize:11,color:'#737373',margin:'0 0 10px'}},'Plak een planning-JSON met type "planning" en een tasks array.'),
+      h('textarea',{className:'inp',style:{minHeight:180,resize:'vertical',fontFamily:'monospace',fontSize:10},
+        placeholder:'{"type":"planning","date":"2026-05-26","tasks":[...]}',
+        value:impRaw,onChange:e=>setImpRaw(e.target.value)}),
+      impMsg&&h('div',{style:{margin:'8px 0',padding:'8px 12px',borderRadius:8,fontSize:12,fontWeight:600,
+        background:impMsg.ok?'rgba(34,197,94,.1)':'rgba(239,68,68,.1)',
+        border:`1px solid ${impMsg.ok?'rgba(34,197,94,.25)':'rgba(239,68,68,.25)'}`,
+        color:impMsg.ok?'#4ade80':'#f87171'}},impMsg.msg),
       h('div',{style:{display:'flex',gap:8,marginTop:10}},
-        h('button',{onClick:()=>{setImportRaw('');setImportMsg(null);},style:{flex:1,background:'#222',color:'#d4d4d4',border:'none',borderRadius:10,padding:'10px',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:600}},'Wissen'),
-        h('button',{onClick:doImport,disabled:!importRaw.trim(),style:{flex:2,background:importRaw.trim()?'#2563eb':'#1a1a1a',color:importRaw.trim()?'#fff':'#525252',border:'none',borderRadius:10,padding:'10px',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:700}},'Importeer')
+        h('button',{onClick:()=>{setImpRaw('');setImpMsg(null);},style:{flex:1,background:'rgba(255,255,255,.08)',color:'#d4d4d4',border:'none',borderRadius:10,padding:'10px',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:600}},'Wissen'),
+        h('button',{onClick:doImport,disabled:!impRaw.trim(),style:{flex:2,background:impRaw.trim()?'#2563eb':'rgba(255,255,255,.05)',color:impRaw.trim()?'#fff':'#525252',border:'none',borderRadius:10,padding:'10px',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:700}},'Importeer')
       )
+    ),
+    // ── Template / Import bar (onderaan) ──────────────────
+    h('div',{className:'glass-bar'},
+      h('div',null,
+        h('p',{style:{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.3em',color:'rgba(255,255,255,.38)',margin:0}},'Planning JSON'),
+        h('p',{style:{fontSize:12,color:'rgba(255,255,255,.65)',margin:'2px 0 0'}},'Kopieer de lege template of importeer een planning.')
+      ),
+      h('div',{style:{display:'flex',gap:7,flexWrap:'wrap'}},
+        h('button',{onClick:copyTmpl,className:'pill-btn'},'📋 Kopieer JSON Template'),
+        h('button',{onClick:()=>{setImpOpen(true);setImpMsg(null);},className:'pill-btn'},'⬆ Importeer JSON')
+      ),
+      cpMsg&&h('p',{style:{fontSize:10,color:'#4ade80',margin:'4px 0 0',width:'100%'}},cpMsg)
     )
   );
 }
@@ -1583,6 +1643,24 @@ function SyncTab({days}){
   );
 }
 
+// ══════════ JSON TEMPLATES ═══════════════════════════════
+const TPL_VOEDING={type:'nutrition',date:'YYYY-MM-DD',meal:{name:'Lunch',time:'lunch',items:[{name:'',amount_g:0,protein:0,kcal:0,carbs:0,fat:0}],totals:{protein:0,kcal:0,carbs:0,fat:0}}};
+const TPL_TRAINING={type:'training',date:'YYYY-MM-DD',session:{name:'Schouder & Bicep',duration_minutes:60,calories_burned:400,volume_kg:0,sets_total:0,start_time:'09:00',exercises:[{name:'Oefening naam',sets:[{set:'W',weight_kg:0,reps:10},{set:1,weight_kg:0,reps:0}]}]}};
+const TPL_GEZOND={type:'samsung_health_full',date:'YYYY-MM-DD',sleep:{actual_sleep_hours:7,bedtime:'23:30',wake_time:'06:30',score:80,score_label:'Goed',score_change:0,hrv_sleep:{average_ms:55,max_ms:70},heart_rate_sleep:{average_bpm:58},factors_sleep_score:{actual_sleep_time:'goed',deep_sleep:'goed',rem_sleep:'goed',rest:'goed',time_to_fall_asleep:'uitstekend'},stages:{awake_percent:5,awake_minutes:20,rem_percent:22,rem_minutes:90,light_percent:50,light_minutes:200,deep_percent:23,deep_minutes:95},naps:[]},energy_score:{score:75,label:'Goed',score_change:2,advice:''},activity:{steps:8000,steps_goal:10000,active_minutes:60,active_minutes_goal:90,calories_activity:400,calories_activity_goal:500,calories_total:2500,distance_km:6,active_hours:1,floors_climbed:0}};
+function TplBar({label,tpl}){
+  const[msg,setMsg]=useState('');
+  function copy(){
+    const txt=JSON.stringify(tpl,null,2);
+    if(navigator.clipboard?.writeText){navigator.clipboard.writeText(txt).then(()=>{setMsg('✓ Template gekopieerd!');setTimeout(()=>setMsg(''),2200);});}
+    else{const el=document.createElement('textarea');el.value=txt;document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);setMsg('✓ Template gekopieerd!');setTimeout(()=>setMsg(''),2200);}
+  }
+  return h('div',{className:'glass-bar'},
+    h('p',{style:{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.28em',color:'rgba(255,255,255,.38)',margin:0}},label),
+    h('button',{onClick:copy,className:'pill-btn'},'📋 Kopieer JSON Template'),
+    msg&&h('p',{style:{fontSize:10,color:'#4ade80',margin:'4px 0 0',width:'100%'}},msg)
+  );
+}
+
 // ══════════ APP ══════════════════════════════════════════
 const TABS=[
   {id:'vandaag', lbl:'Vandaag',   icon:'📊'},
@@ -1603,30 +1681,31 @@ function App(){
   const greeting=hr<12?'Goedemorgen':hr<18?'Goedenmiddag':'Goedenavond';
   const dateLbl=now.toLocaleDateString('nl-BE',{weekday:'long',day:'numeric',month:'long'});
   const dot=syncSt==='idle'?null:h('div',{style:{width:7,height:7,borderRadius:'50%',flexShrink:0,background:{syncing:'#f59e0b',synced:'#22c55e',error:'#ef4444'}[syncSt],boxShadow:syncSt==='synced'?'0 0 8px rgba(34,197,94,.6)':syncSt==='syncing'?'0 0 6px rgba(245,158,11,.4)':'none',animation:syncSt==='syncing'?'pulse .8s infinite':'none'}});
-  return h('div',{style:{minHeight:'100vh',background:'#0a0a0a',color:'#fff',fontFamily:'Inter,system-ui,sans-serif'}},
-    h('header',{style:{position:'sticky',top:0,zIndex:40,background:'rgba(10,10,10,.92)',backdropFilter:'blur(20px)',borderBottom:'1px solid #1c1c1c'}},
+  return h('div',{style:{minHeight:'100vh',color:'#fff',fontFamily:'Inter,system-ui,sans-serif'}},
+    h('header',{style:{position:'sticky',top:0,zIndex:40,background:'rgba(5,7,12,.75)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',borderBottom:'1px solid rgba(255,255,255,.07)'}},
       h('div',{style:{maxWidth:920,margin:'0 auto',padding:'0 16px'}},
-        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 0'}},
-          h('div',null,h('p',{style:{fontSize:10,color:'#525252',textTransform:'capitalize',letterSpacing:'.04em',margin:0}},dateLbl),h('h1',{style:{fontSize:17,fontWeight:900,letterSpacing:'-.02em',margin:'2px 0 0'}},greeting+', ',h('span',{style:{background:'linear-gradient(90deg,#60a5fa,#93c5fd)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}},'Jonas'),' 👊')),
-          h('div',{style:{display:'flex',alignItems:'center',gap:8}},dot,h('div',{style:{width:34,height:34,borderRadius:'50%',background:'linear-gradient(135deg,#2563eb,#4f46e5)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:13}},'J'))
-        ),
-        h('div',{style:{display:'flex',gap:2,paddingBottom:10,overflowX:'auto'}},TABS.map(t=>h('button',{key:t.id,onClick:()=>setTab(t.id),style:{display:'flex',alignItems:'center',gap:5,padding:'5px 11px',borderRadius:10,fontSize:12,fontWeight:600,border:`1px solid ${tab===t.id?'rgba(59,130,246,.3)':'transparent'}`,background:tab===t.id?'rgba(59,130,246,.15)':'none',color:tab===t.id?'#60a5fa':'#525252',cursor:'pointer',fontFamily:'inherit',flexShrink:0}},t.icon,' ',t.lbl)))
+        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'13px 0'}},
+          h('div',null,h('p',{style:{fontSize:10,color:'rgba(255,255,255,.38)',textTransform:'capitalize',letterSpacing:'.06em',margin:0}},dateLbl),h('h1',{style:{fontSize:17,fontWeight:800,letterSpacing:'-.02em',margin:'3px 0 0'}},greeting+', ',h('span',{style:{background:'linear-gradient(90deg,#38bdf8,#93c5fd)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}},'Jonas'),' 👊')),
+          h('div',{style:{display:'flex',alignItems:'center',gap:8}},dot,h('div',{style:{width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,rgba(56,189,248,.25),rgba(79,70,229,.25))',border:'1px solid rgba(255,255,255,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:13}},'J'))
+        )
       )
     ),
-    h('main',{style:{maxWidth:920,margin:'0 auto',padding:'14px 16px 120px'}},
+    h('main',{style:{maxWidth:920,margin:'0 auto',padding:'14px 16px 140px'}},
       tab==='vandaag' &&h(VandaagTab,{days,setTab}),
       tab==='voeding' &&h(VoedingTab,{days, setDays}), // Added setDays for deletion
       tab==='training'&&h(TrainingTab,{days}),
       tab==='gezond'  &&h(GezondheidsTab,{days}),
       tab==='goals'   &&h(GoalsTab,{days,setDays}),
       tab==='school'  &&h(SchoolTab,null),
-      tab==='planning'&&h(PlanningTab,{days,setDays}),
+      tab==='planning'&&h(PlanningTab,null),
       tab==='sync'    &&h(SyncTab,{days})
     ),
     h(FloatingImport,{days,setDays}),
-    h('nav',{style:{position:'fixed',bottom:0,left:0,right:0,zIndex:40,background:'rgba(10,10,10,.96)',backdropFilter:'blur(20px)',borderTop:'1px solid #1c1c1c',overflowX:'auto'}},
-      h('div',{style:{display:'flex',maxWidth:920,margin:'0 auto',minWidth:'max-content',padding:'0 4px'}},
-        TABS.map(t=>h('button',{key:t.id,onClick:()=>setTab(t.id),style:{minWidth:56,flex:'0 0 auto',display:'flex',flexDirection:'column',alignItems:'center',gap:2,padding:'10px 6px',border:'none',background:'none',color:tab===t.id?'#60a5fa':'#404040',cursor:'pointer',fontFamily:'inherit'}},h('span',{style:{fontSize:15}},t.icon),h('span',{style:{fontSize:'8px',fontWeight:700,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap'}},t.lbl)))
+    h('nav',{style:{position:'fixed',bottom:14,left:0,right:0,zIndex:40,display:'flex',justifyContent:'center',padding:'0 8px',pointerEvents:'none'}},
+      h('div',{style:{pointerEvents:'auto',borderRadius:999,border:'1px solid rgba(255,255,255,.1)',background:'rgba(5,7,12,.78)',backdropFilter:'blur(28px)',WebkitBackdropFilter:'blur(28px)',padding:'6px 8px',boxShadow:'0 30px 80px rgba(0,0,0,.55)',overflowX:'auto',maxWidth:'calc(100vw - 16px)'}},
+        h('div',{style:{display:'flex',alignItems:'stretch',gap:3,minWidth:'max-content'}},
+          TABS.map(t=>h('button',{key:t.id,onClick:()=>setTab(t.id),style:{flex:'0 0 auto',display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'8px 10px',border:'none',borderRadius:999,background:tab===t.id?'rgba(255,255,255,.12)':'none',color:tab===t.id?'#fff':'rgba(255,255,255,.4)',cursor:'pointer',fontFamily:'inherit',transition:'all .15s',boxShadow:tab===t.id?'0 0 20px rgba(255,255,255,.05)':'none'}},h('span',{style:{fontSize:14}},t.icon),h('span',{style:{fontSize:'7.5px',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',whiteSpace:'nowrap'}},t.lbl)))
+        )
       )
     )
   );
